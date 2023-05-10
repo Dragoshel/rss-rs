@@ -1,11 +1,8 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::io::{BufReader, Read};
 
 use xml::{reader::XmlEvent, EventReader};
 
-pub fn get_text(reader: &mut EventReader<BufReader<File>>) -> Option<String> {
+pub fn get_text(reader: &mut EventReader<BufReader<Box<dyn Read>>>) -> Option<String> {
     loop {
         match reader.next() {
             Ok(XmlEvent::CData(text)) => return Some(text.to_string()),
@@ -17,8 +14,8 @@ pub fn get_text(reader: &mut EventReader<BufReader<File>>) -> Option<String> {
     None
 }
 
-pub fn skip_to<R: Read>(
-    reader: &mut EventReader<BufReader<R>>,
+pub fn skip_to(
+    reader: &mut EventReader<BufReader<Box<dyn Read>>>,
     tag_name: &str,
 ) -> Result<(), String> {
     loop {
@@ -35,8 +32,8 @@ pub fn skip_to<R: Read>(
     }
 }
 
-pub fn skip_current<R: Read>(
-    reader: &mut EventReader<BufReader<R>>,
+pub fn skip_current(
+    reader: &mut EventReader<BufReader<Box<dyn Read>>>,
     current_tag_name: &str,
 ) -> Result<(), &'static str> {
     loop {

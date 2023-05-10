@@ -1,5 +1,8 @@
 use crate::util::{get_text, skip_to};
-use std::{fmt::Display, fs::File, io::BufReader};
+use std::{
+    fmt::Display,
+    io::{BufReader, Read},
+};
 
 use xml::{reader::XmlEvent, EventReader};
 
@@ -35,7 +38,7 @@ impl Display for Item {
 
 impl Item {
     pub fn read_index(
-        reader: &mut EventReader<BufReader<File>>,
+        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
         index: i8,
     ) -> xml::reader::Result<Item> {
         skip_to(reader, "item").unwrap();
@@ -47,7 +50,7 @@ impl Item {
     }
 
     pub fn read_count(
-        reader: &mut EventReader<BufReader<File>>,
+        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
         count: i8,
     ) -> xml::reader::Result<Vec<Item>> {
         let mut items: Vec<Item> = Vec::new();
@@ -63,7 +66,9 @@ impl Item {
         Ok(items)
     }
 
-    pub fn read_all(reader: &mut EventReader<BufReader<File>>) -> xml::reader::Result<Item> {
+    pub fn read_all(
+        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
+    ) -> xml::reader::Result<Item> {
         let mut item = Item::default();
 
         loop {

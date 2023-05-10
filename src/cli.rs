@@ -1,7 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 use std::{
     fs::File,
-    io::{BufReader, Read},
+    io::{BufReader, Cursor, Read},
 };
 use url::Url;
 use xml::EventReader;
@@ -39,16 +39,24 @@ struct ReadCommand {
     item: Option<u8>,
 
     #[arg(group = "input")]
-    url: Option<String>,
+    url: String,
 }
 
 #[derive(Args)]
 struct WriteCommand {}
 
-fn is_valid_url(url: String) -> bool {
-    match Url::parse(url.as_str()) {
-        Ok(_) => true,
-        Err(_) => false,
+fn get(url_or_local_path: String) -> Box<dyn Read> {
+    if let Ok(_) = Url::parse(&url_or_local_path) {
+        let body = reqwest::blocking::get(url_or_local_path)
+            .unwrap()
+            .text()
+            .unwrap();
+        let cursor = Cursor::new(body);
+
+        Box::new(cursor)
+    } else {
+        let file = File::open(url_or_local_path).unwrap();
+        Box::new(file)
     }
 }
 
@@ -56,13 +64,12 @@ pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Command::Read(read_command)) => {
-            let url = read_command.url.unwrap();
-            let file = File::open(url).unwrap();
-            let file = BufReader::new(file);
-            let mut reader = EventReader::new(file);
+        Some(Command::Read(command)) => {
+            let url = command.url;
+            let reader = BufReader::new(get(url));
+            let mut reader = EventReader::new(reader);
 
-            match read_command.items {
+            match command.items {
                 Some(count) => {
                     let items = Item::read_count(&mut reader, count as i8).unwrap();
 
@@ -76,7 +83,7 @@ pub fn run() {
                 _ => {}
             }
 
-            match read_command.item {
+            match command.item {
                 Some(index) => {
                     let item = Item::read_index(&mut reader, index as i8).unwrap();
                     println!("{item}");
@@ -86,7 +93,7 @@ pub fn run() {
             }
 
             let channel: Channel;
-            if read_command.verbose {
+            if command.verbose {
                 channel = Channel::read_all(&mut reader).unwrap();
                 println!("{channel}");
             } else {
@@ -94,7 +101,7 @@ pub fn run() {
                 println!("{channel}");
             }
         }
-        Some(Command::Write(read_command)) => {}
-        None => todo!(),
+        Some(Command::Write(command)) => todo!(),
+        _ => todo!(),
     }
 }

@@ -1,5 +1,6 @@
 use crate::util::get_text;
 use crate::{models::item::Item, util::skip_current};
+use std::io::Read;
 use std::{fmt::Display, fs::File, io::BufReader};
 use xml::{reader::Error, reader::XmlEvent, EventReader};
 
@@ -77,7 +78,7 @@ impl Display for Channel {
 }
 
 impl Channel {
-    pub fn read_all(reader: &mut EventReader<BufReader<File>>) -> Result<Channel, Error> {
+    pub fn read_all(reader: &mut EventReader<BufReader<Box<dyn Read>>>) -> Result<Channel, Error> {
         let mut channel = Channel::default();
 
         loop {
@@ -129,7 +130,7 @@ impl Channel {
         Ok(channel)
     }
 
-    pub fn read_required(reader: &mut EventReader<BufReader<File>>) -> Result<Channel, Error> {
+    pub fn read_required(reader: &mut EventReader<BufReader<Box<dyn Read>>>) -> Result<Channel, Error> {
         let mut channel = Channel::default();
 
         loop {
