@@ -7,9 +7,9 @@ use xml::{reader::Error, reader::XmlEvent, EventReader};
 #[derive(Default, Debug)]
 pub struct Channel {
     // REQUIRED channel elements
-    title: String,
-    link: String,
-    description: String,
+    pub title: String,
+    pub link: String,
+    pub description: String,
 
     // OPTIONAL channel elements
     language: Option<String>,

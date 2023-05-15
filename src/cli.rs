@@ -6,7 +6,10 @@ use std::{
 use url::Url;
 use xml::EventReader;
 
-use crate::models::{channel::Channel, item::Item};
+use crate::{
+    frontend,
+    models::{channel::Channel, item::Item},
+};
 
 #[derive(Parser)]
 #[command(name = "Rss-Rs")]
@@ -102,6 +105,13 @@ pub fn run() {
             }
         }
         Some(Command::Write(command)) => todo!(),
-        _ => todo!(),
+        None => {
+            let reader = get(String::from("data/sample-rss.xml"));
+            let reader = BufReader::new(reader);
+            let mut reader = EventReader::new(reader);
+            let channel = Channel::read_all(&mut reader).unwrap();
+
+            frontend::spawn(channel).unwrap();
+        }
     }
 }

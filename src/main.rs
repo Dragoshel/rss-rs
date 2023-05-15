@@ -1,6 +1,8 @@
 mod cli;
 mod models;
 mod util;
+mod frontend;
+mod widgets;
 
 use cli::run;
 
