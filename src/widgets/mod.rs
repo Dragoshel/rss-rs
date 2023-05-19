@@ -1,2 +1,3 @@
-pub mod channel_widget;
-pub mod input_widget;
+mod nav_list;
+
+pub use self::nav_list::NavList;

@@ -9,9 +9,9 @@ use xml::{reader::XmlEvent, EventReader};
 #[derive(Default, Debug)]
 pub struct Item {
     // OPTIONAL item elements
-    title: Option<String>,
-    link: Option<String>,
-    description: Option<String>,
+    pub title: Option<String>,
+    pub link: Option<String>,
+    pub description: Option<String>,
     author: Option<String>,
     category: Option<String>,
     comments: Option<String>,
@@ -37,6 +37,22 @@ impl Display for Item {
 }
 
 impl Item {
+	pub fn read_all(
+        reader: &mut EventReader<BufReader<Box<dyn Read>>>
+	) -> Vec<Item> {
+        let mut items: Vec<Item> = Vec::new();
+
+		loop {
+			if let Ok(_) = skip_to(reader, "item") {
+				let item = Item::read(reader).unwrap();
+				items.push(item);
+			} else {
+				break;
+			}
+		}
+		items
+	}
+
     pub fn read_index(
         reader: &mut EventReader<BufReader<Box<dyn Read>>>,
         index: i8,
@@ -46,19 +62,19 @@ impl Item {
         for _ in 0..index {
             skip_to(reader, "item").unwrap();
         }
-        Ok(Item::read_all(reader).unwrap())
+        Ok(Item::read(reader).unwrap())
     }
 
     pub fn read_count(
         reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-        count: i8,
+        count: i8
     ) -> xml::reader::Result<Vec<Item>> {
         let mut items: Vec<Item> = Vec::new();
 
         skip_to(reader, "item").unwrap();
 
         for _ in 0..count {
-            let item = Item::read_all(reader).unwrap();
+            let item = Item::read(reader).unwrap();
             items.push(item);
             skip_to(reader, "item").unwrap();
         }
@@ -66,7 +82,7 @@ impl Item {
         Ok(items)
     }
 
-    pub fn read_all(
+    pub fn read(
         reader: &mut EventReader<BufReader<Box<dyn Read>>>,
     ) -> xml::reader::Result<Item> {
         let mut item = Item::default();

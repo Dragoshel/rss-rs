@@ -6,10 +6,8 @@ use std::{
 use url::Url;
 use xml::EventReader;
 
-use crate::{
-    frontend,
-    models::{channel::Channel, item::Item},
-};
+use crate::models::{Item, Channel};
+use crate::app::spawn;
 
 #[derive(Parser)]
 #[command(name = "Rss-Rs")]
@@ -48,8 +46,8 @@ struct ReadCommand {
 #[derive(Args)]
 struct WriteCommand {}
 
-fn get(url_or_local_path: String) -> Box<dyn Read> {
-    if let Ok(_) = Url::parse(&url_or_local_path) {
+fn get(url_or_local_path: &str) -> Box<dyn Read> {
+    if let Ok(_) = Url::parse(url_or_local_path) {
         let body = reqwest::blocking::get(url_or_local_path)
             .unwrap()
             .text()
@@ -68,7 +66,7 @@ pub fn run() {
 
     match cli.command {
         Some(Command::Read(command)) => {
-            let url = command.url;
+            let url = command.url.as_str();
             let reader = BufReader::new(get(url));
             let mut reader = EventReader::new(reader);
 
@@ -104,14 +102,9 @@ pub fn run() {
                 println!("{channel}");
             }
         }
-        Some(Command::Write(command)) => todo!(),
+        Some(Command::Write(_command)) => todo!(),
         None => {
-            let reader = get(String::from("data/sample-rss.xml"));
-            let reader = BufReader::new(reader);
-            let mut reader = EventReader::new(reader);
-            let channel = Channel::read_all(&mut reader).unwrap();
-
-            frontend::spawn(channel).unwrap();
+            spawn().unwrap();
         }
     }
 }
