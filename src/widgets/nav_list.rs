@@ -5,6 +5,7 @@ use tui::widgets::{ListItem, ListState, List, Block, Borders, StatefulWidget};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
+#[derive(Default)]
 pub struct NavList<'a> {
 	pub title: &'a str,
 	pub items: Vec<String>,
@@ -25,7 +26,7 @@ impl<'a> NavList<'a> {
 		}
 	}
 
-	pub fn renderable(&self) -> RenderNavList<'a> {
+	pub fn as_render(&self) -> RenderNavList<'a> {
 		let items: Vec<ListItem> = self.items
 			.iter()
 			.map(|i| ListItem::new(i.to_string()))

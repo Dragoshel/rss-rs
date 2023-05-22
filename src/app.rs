@@ -1,88 +1,76 @@
-use tui::Terminal;
 use tui::backend::CrosstermBackend;
+use tui::Terminal;
 
-use std::io::{stdout, Result};
+use std::io::{stdout, Result, Stdout};
 use std::time::Duration;
 
-use crossterm::event::{poll, read, DisableMouseCapture, EnableMouseCapture};
+use crossterm::event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 
-use crate::menus::{FeedsMenu, StoriesMenu, Menu, MenuState};
+use crate::menus::{FeedsMenu, Menu, MenuState, StoriesMenu};
 
+pub struct App<'a> {
+    pub feeds_menu: FeedsMenu<'a>,
+    pub stories_menu: StoriesMenu<'a>,
 
-struct App {
-	current_menu: MenuState
+    pub current_menu: MenuState,
 }
 
-pub fn spawn() -> Result<()> {
-	let mut app = App {
-		current_menu: MenuState::FeedsMenu
-	};
-    // setup terminal
-    enable_raw_mode()?;
-    let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-	
-	let subscribed_channels = vec![
-		("Darknet Diaries".to_string(), "https://feeds.megaphone.fm/darknetdiaries".to_string()),
-		("It's FOSS".to_string(), "https://itsfoss.com/rss/".to_string()),
-		("Security Latest".to_string(), "https://www.wired.com/feed/category/security/latest/rss".to_string()),
-		("Hacker News".to_string(), "https://news.ycombinator.com/rss".to_string())
-	];
-	let items = vec![
-		"133: I'm the Real Connor".to_string(),
-		"132: Sam the Vendor".to_string(),
-		"131: Welcome to Video".to_string(),
-		"130: Jason's Pen Test".to_string()
-	];
+impl<'a> Default for App<'a> {
+    fn default() -> Self {
+        App {
+            feeds_menu: FeedsMenu::default(),
+            stories_menu: StoriesMenu::default(),
 
-    let mut feeds_menu = FeedsMenu::new(subscribed_channels);
-    let mut stories_menu = StoriesMenu::new(items);
+            current_menu: MenuState::Feeds,
+        }
+    }
+}
 
-    loop {
-		match &app.current_menu {
-			MenuState::FeedsMenu => {
-        		terminal.draw(|f| feeds_menu.ui(f))?;
+impl<'a> App<'a> {
+    pub fn spawn(&mut self) -> Result<()> {
+        enable_raw_mode()?;
+        let mut stdout = stdout();
+        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
 
-		        if poll(Duration::from_millis(500)).unwrap() {
-					let event = read().unwrap();
-					
-					if let Some(next_menu) = feeds_menu.transition(event) {
-						app.current_menu = next_menu;
-					} else {
-						break;
-					}
-				}
-			},
-			MenuState::StoriesMenu => {
-        		terminal.draw(|f| stories_menu.ui(f))?;
+        loop {
+            self.current_menu = match self.current_menu {
+                MenuState::Feeds => Self::ui(&mut self.feeds_menu, &mut terminal),
+                MenuState::Stories => Self::ui(&mut self.stories_menu, &mut terminal),
+                MenuState::Exit => {
+                    break;
+                }
+            };
+        }
 
-		        if poll(Duration::from_millis(500)).unwrap() {
-					let event = read().unwrap();
-					if let Some(next_menu) = stories_menu.transition(event) {
-						app.current_menu = next_menu;
-					} else {
-						break;
-					}
-		        }
-			}
-		}		
+        // restore terminal
+        disable_raw_mode()?;
+        execute!(
+            terminal.backend_mut(),
+            LeaveAlternateScreen,
+            DisableMouseCapture
+        )?;
+        terminal.show_cursor()?;
 
+        Ok(())
     }
 
-    // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    fn ui<M: Menu>(menu: &mut M, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> MenuState {
+        terminal.draw(|f| menu.draw(f)).unwrap();
 
-    Ok(())
+        if poll(Duration::from_millis(500)).unwrap() {
+            let event = read().unwrap();
+            if let Event::Key(key_event) = event {
+                menu.handle_key_event(key_event);
+
+                return menu.transition(key_event);
+            }
+        }
+		menu.get_state()
+    }
 }

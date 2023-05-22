@@ -1,14 +1,18 @@
-use crossterm::event::{Event, KeyCode};
-use tui::backend::Backend;
+use std::io::Stdout;
+
+use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::terminal::Frame;
 use tui::text::Text;
 use tui::widgets::{Block, Borders, Paragraph};
 
+use crossterm::event::{KeyCode, KeyEvent};
+
 use crate::widgets::NavList;
 
 use super::{Menu, MenuState};
 
+#[derive(Default)]
 pub struct FeedsMenu<'a> {
     input_buffer: String,
     nav_list: NavList<'a>,
@@ -25,27 +29,7 @@ impl<'a> FeedsMenu<'a> {
 }
 
 impl<'a> Menu for FeedsMenu<'a> {
-    fn transition(&mut self, event: Event) -> Option<MenuState> {
-        if let Event::Key(key) = event {
-            self.nav_list.navigate(key);
-
-            match key.code {
-                KeyCode::Char('q') => return None,
-                KeyCode::Char(key) => {
-                    self.input_buffer.push(key);
-                }
-                KeyCode::Enter => return Some(MenuState::StoriesMenu),
-                KeyCode::Backspace => {
-                    self.input_buffer.pop();
-                }
-                _ => {}
-            }
-        }
-		
-		Some(MenuState::FeedsMenu)
-    }
-
-    fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
+    fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
@@ -61,9 +45,34 @@ impl<'a> Menu for FeedsMenu<'a> {
         f.render_widget(paragraph, chunks[0]);
 
         f.render_stateful_widget(
-            self.nav_list.renderable(),
+            self.nav_list.as_render(),
             chunks[1],
             &mut self.nav_list.state,
         );
     }
+
+    fn transition(&mut self, key_event: KeyEvent) -> MenuState {
+        match key_event.code {
+            KeyCode::Char('q') => return MenuState::Exit,
+            KeyCode::Char(key) => {
+                self.input_buffer.push(key);
+            }
+            KeyCode::Enter => return MenuState::Stories,
+            KeyCode::Backspace => {
+                self.input_buffer.pop();
+            }
+            _ => {}
+        }
+		
+		MenuState::Feeds
+    }
+
+	fn handle_key_event(&mut self, key_event: KeyEvent) {
+		self.nav_list.navigate(key_event);
+	}
+
+
+	fn get_state(&mut self) -> MenuState {
+	    MenuState::Feeds
+	}
 }

@@ -7,7 +7,7 @@ use url::Url;
 use xml::EventReader;
 
 use crate::models::{Item, Channel};
-use crate::app::spawn;
+use crate::app::App;
 
 #[derive(Parser)]
 #[command(name = "Rss-Rs")]
@@ -104,7 +104,33 @@ pub fn run() {
         }
         Some(Command::Write(_command)) => todo!(),
         None => {
-            spawn().unwrap();
+	        // let subscribed_channels = vec![
+	        //     (
+	        //         "Darknet Diaries".to_string(),
+	        //         "https://feeds.megaphone.fm/darknetdiaries".to_string(),
+	        //     ),
+	        //     (
+	        //         "It's FOSS".to_string(),
+	        //         "https://itsfoss.com/rss/".to_string(),
+	        //     ),
+	        //     (
+	        //         "Security Latest".to_string(),
+	        //         "https://www.wired.com/feed/category/security/latest/rss".to_string(),
+	        //     ),
+	        //     (
+	        //         "Hacker News".to_string(),
+	        //         "https://news.ycombinator.com/rss".to_string(),
+	        //     ),
+	        // ];
+
+	        // let items = vec![
+	        //     "133: I'm the Real Connor".to_string(),
+	        //     "132: Sam the Vendor".to_string(),
+	        //     "131: Welcome to Video".to_string(),
+	        //     "130: Jason's Pen Test".to_string(),
+	        // ];
+
+			App::default().spawn().unwrap();
         }
     }
 }

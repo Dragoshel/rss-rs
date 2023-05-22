@@ -776,6 +776,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "crossterm 0.26.1",
+ "lazy_static",
  "reqwest",
  "tui",
  "url",

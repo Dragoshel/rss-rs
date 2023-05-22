@@ -1,19 +1,25 @@
 mod feeds;
 mod stories;
 
+use std::io::Stdout;
+
 pub use self::feeds::FeedsMenu;
 pub use self::stories::StoriesMenu;
 
 use tui::Frame;
-use tui::backend::Backend;
-use crossterm::event::Event;
+use tui::backend::CrosstermBackend;
+
+use crossterm::event::KeyEvent;
 
 pub enum MenuState {
-	FeedsMenu,
-	StoriesMenu
+	Feeds,
+	Stories,
+	Exit
 }
 
 pub trait Menu {
-	fn transition(&mut self, event: Event) -> Option<MenuState>;
-    fn ui<B: Backend>(&mut self, f: &mut Frame<B>);
+    fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
+	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
+	fn handle_key_event(&mut self, key_event: KeyEvent);
+	fn get_state(&mut self) -> MenuState;
 }
