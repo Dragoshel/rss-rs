@@ -1,4 +1,4 @@
-use crate::util::{get_text, skip_to};
+use crate::util::{get_text, skip_to, get};
 use std::{
     fmt::Display,
     io::{BufReader, Read},
@@ -12,6 +12,7 @@ pub struct Item {
     pub title: Option<String>,
     pub link: Option<String>,
     pub description: Option<String>,
+
     author: Option<String>,
     category: Option<String>,
     comments: Option<String>,
@@ -37,6 +38,28 @@ impl Display for Item {
 }
 
 impl Item {
+
+	pub fn read_from_url_by_title(url: &String, title: String) -> xml::reader::Result<Item, String> {		
+		let reader = BufReader::new(get(url.to_string()));
+		let mut reader = EventReader::new(reader);
+
+		loop {
+			if let Ok(_) = skip_to(&mut reader, "item") {
+				let item = Self::read(&mut reader).unwrap();
+				if item.title.clone().unwrap() == title {
+					return Ok(item);
+				}
+			} else { break; }
+		}
+		Err("no items".to_string())
+	}
+
+	pub fn read_from_url(url: String) -> Vec<Item> {
+		let reader = BufReader::new(get(url));
+		let mut reader = EventReader::new(reader);
+		Self::read_all(&mut reader)
+	}
+
 	pub fn read_all(
         reader: &mut EventReader<BufReader<Box<dyn Read>>>
 	) -> Vec<Item> {

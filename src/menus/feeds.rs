@@ -8,6 +8,7 @@ use tui::widgets::{Block, Borders, Paragraph};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
+use crate::models::Channel;
 use crate::widgets::NavList;
 
 use super::{Menu, MenuState};
@@ -19,13 +20,29 @@ pub struct FeedsMenu<'a> {
 }
 
 impl<'a> FeedsMenu<'a> {
+	pub fn from(channels: &Vec<Channel>) -> FeedsMenu<'a> {
+		let channels = channels
+			.iter()
+			.map(|c| c.title.clone())
+			.collect();	
+		
+		FeedsMenu {
+			input_buffer: String::new(),
+			nav_list: NavList::new("Feeds", channels)
+		}	
+	}
+
     pub fn new(subscribed_channels: Vec<(String, String)>) -> FeedsMenu<'a> {
-		let items:Vec<String> = subscribed_channels.iter().map(|f| f.0.to_string()).collect();
+        let items: Vec<String> = subscribed_channels
+            .iter()
+            .map(|f| f.0.to_string())
+            .collect();
+
         FeedsMenu {
             input_buffer: String::new(),
             nav_list: NavList::new("Feeds", items),
         }
-    }
+    }	
 }
 
 impl<'a> Menu for FeedsMenu<'a> {
@@ -36,7 +53,6 @@ impl<'a> Menu for FeedsMenu<'a> {
             .constraints([Constraint::Percentage(10), Constraint::Percentage(80)].as_ref())
             .split(f.size());
 
-        // Input Widget
         let block = Block::default()
             .title("Get feed manually")
             .borders(Borders::ALL);
@@ -57,22 +73,28 @@ impl<'a> Menu for FeedsMenu<'a> {
             KeyCode::Char(key) => {
                 self.input_buffer.push(key);
             }
-            KeyCode::Enter => return MenuState::Stories,
+            KeyCode::Enter => {
+				let selected = self.nav_list.state.selected().unwrap();
+				let selected = self.nav_list.items.get(selected).unwrap();
+				
+				return MenuState::Stories(
+					Some(selected.to_string())
+				)
+			}
             KeyCode::Backspace => {
                 self.input_buffer.pop();
             }
             _ => {}
         }
-		
-		MenuState::Feeds
+
+        MenuState::Feeds
     }
 
-	fn handle_key_event(&mut self, key_event: KeyEvent) {
-		self.nav_list.navigate(key_event);
-	}
+    fn handle_key_event(&mut self, key_event: KeyEvent) {
+        self.nav_list.navigate(key_event);
+    }
 
-
-	fn get_state(&mut self) -> MenuState {
-	    MenuState::Feeds
-	}
+    fn get_state(&mut self) -> MenuState {
+        MenuState::Feeds
+    }
 }

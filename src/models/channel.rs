@@ -77,20 +77,7 @@ impl Display for Channel {
         Ok(())
     }
 }
-fn get(url_or_local_path: String) -> Box<dyn Read> {
-    if let Ok(_) = Url::parse(&url_or_local_path) {
-        let body = reqwest::blocking::get(url_or_local_path)
-            .unwrap()
-            .text()
-            .unwrap();
-        let cursor = Cursor::new(body);
 
-        Box::new(cursor)
-    } else {
-        let file = File::open(url_or_local_path).unwrap();
-        Box::new(file)
-    }
-}
 impl Channel {
     pub fn read_all(reader: &mut EventReader<BufReader<Box<dyn Read>>>) -> Result<Channel, Error> {
         let mut channel = Channel::default();

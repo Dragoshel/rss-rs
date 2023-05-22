@@ -1,10 +1,13 @@
+
 mod feeds;
 mod stories;
+mod contents;
 
 use std::io::Stdout;
 
 pub use self::feeds::FeedsMenu;
 pub use self::stories::StoriesMenu;
+pub use self::contents::ContentsMenu;
 
 use tui::Frame;
 use tui::backend::CrosstermBackend;
@@ -13,7 +16,8 @@ use crossterm::event::KeyEvent;
 
 pub enum MenuState {
 	Feeds,
-	Stories,
+	Stories(Option<String>),
+	Contents(Option<String>),
 	Exit
 }
 

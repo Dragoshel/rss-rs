@@ -6,7 +6,7 @@ use std::{
 use url::Url;
 use xml::EventReader;
 
-use crate::models::{Item, Channel};
+use crate::{models::{Item, Channel}, menus::{FeedsMenu, StoriesMenu}, util::get};
 use crate::app::App;
 
 #[derive(Parser)]
@@ -46,27 +46,12 @@ struct ReadCommand {
 #[derive(Args)]
 struct WriteCommand {}
 
-fn get(url_or_local_path: &str) -> Box<dyn Read> {
-    if let Ok(_) = Url::parse(url_or_local_path) {
-        let body = reqwest::blocking::get(url_or_local_path)
-            .unwrap()
-            .text()
-            .unwrap();
-        let cursor = Cursor::new(body);
-
-        Box::new(cursor)
-    } else {
-        let file = File::open(url_or_local_path).unwrap();
-        Box::new(file)
-    }
-}
-
 pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
         Some(Command::Read(command)) => {
-            let url = command.url.as_str();
+            let url = command.url;
             let reader = BufReader::new(get(url));
             let mut reader = EventReader::new(reader);
 
@@ -104,33 +89,34 @@ pub fn run() {
         }
         Some(Command::Write(_command)) => todo!(),
         None => {
-	        // let subscribed_channels = vec![
-	        //     (
-	        //         "Darknet Diaries".to_string(),
-	        //         "https://feeds.megaphone.fm/darknetdiaries".to_string(),
-	        //     ),
-	        //     (
-	        //         "It's FOSS".to_string(),
-	        //         "https://itsfoss.com/rss/".to_string(),
-	        //     ),
-	        //     (
-	        //         "Security Latest".to_string(),
-	        //         "https://www.wired.com/feed/category/security/latest/rss".to_string(),
-	        //     ),
-	        //     (
-	        //         "Hacker News".to_string(),
-	        //         "https://news.ycombinator.com/rss".to_string(),
-	        //     ),
-	        // ];
 
-	        // let items = vec![
-	        //     "133: I'm the Real Connor".to_string(),
-	        //     "132: Sam the Vendor".to_string(),
-	        //     "131: Welcome to Video".to_string(),
-	        //     "130: Jason's Pen Test".to_string(),
-	        // ];
+			let mut darknet_diaries = Channel::default();
+			darknet_diaries.title = String::from("Darknet Diaries");
+			darknet_diaries.link = String::from("https://feeds.megaphone.fm/darknetdiaries");
+			
+			let mut its_foss = Channel::default();
+			its_foss.title = String::from("It's FOSS");
+			its_foss.link = String::from("https://itsfoss.com/rss/");
 
-			App::default().spawn().unwrap();
+			let mut security_latest = Channel::default();
+			security_latest.title = String::from("Security Latest");
+			security_latest.link = String::from("https://www.wired.com/feed/category/security/latest/rss");
+
+			let mut hacker_news = Channel::default();
+			hacker_news.title = String::from("Hacker News");
+			hacker_news.link = String::from("https://news.ycombinator.com/rss");
+
+	        let subscribed_channels = vec![darknet_diaries, its_foss, security_latest, hacker_news];
+
+			let feeds_menu = FeedsMenu::from(&subscribed_channels);
+			let stories_menu = StoriesMenu::default();
+
+			let mut app = App::default();
+			app.feeds_menu = feeds_menu;
+			app.stories_menu = stories_menu;
+			app.subscribed_channels = subscribed_channels;
+
+			app.spawn().unwrap();
         }
     }
 }

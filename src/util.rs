@@ -49,8 +49,8 @@ pub fn skip_current(
     }
 }
 
-pub fn get(url_or_local_path: &str) -> Box<dyn Read> {
-    if let Ok(_) = Url::parse(url_or_local_path) {
+pub fn get(url_or_local_path: String) -> Box<dyn Read> {
+    if let Ok(_) = Url::parse(url_or_local_path.as_str()) {
         let body = reqwest::blocking::get(url_or_local_path)
             .unwrap()
             .text()
