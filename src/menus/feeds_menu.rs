@@ -9,40 +9,23 @@ use tui::widgets::{Block, Borders, Paragraph};
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::models::Channel;
-use crate::widgets::NavList;
+use crate::widgets::ChannelList;
 
 use super::{Menu, MenuState};
 
 #[derive(Default)]
 pub struct FeedsMenu<'a> {
+    channel_list: ChannelList<'a>,
     input_buffer: String,
-    nav_list: NavList<'a>,
 }
 
 impl<'a> FeedsMenu<'a> {
-	pub fn from(channels: &Vec<Channel>) -> FeedsMenu<'a> {
-		let channels = channels
-			.iter()
-			.map(|c| c.title.clone())
-			.collect();	
-		
-		FeedsMenu {
-			input_buffer: String::new(),
-			nav_list: NavList::new("Feeds", channels)
-		}	
-	}
-
-    pub fn new(subscribed_channels: Vec<(String, String)>) -> FeedsMenu<'a> {
-        let items: Vec<String> = subscribed_channels
-            .iter()
-            .map(|f| f.0.to_string())
-            .collect();
-
+    pub fn new(channels: Vec<Channel>) -> Self {
         FeedsMenu {
+            channel_list: ChannelList::new("Your Feed", channels),
             input_buffer: String::new(),
-            nav_list: NavList::new("Feeds", items),
         }
-    }	
+    }
 }
 
 impl<'a> Menu for FeedsMenu<'a> {
@@ -61,9 +44,9 @@ impl<'a> Menu for FeedsMenu<'a> {
         f.render_widget(paragraph, chunks[0]);
 
         f.render_stateful_widget(
-            self.nav_list.as_render(),
+            self.channel_list.as_render(),
             chunks[1],
-            &mut self.nav_list.state,
+            &mut self.channel_list.state,
         );
     }
 
@@ -74,13 +57,15 @@ impl<'a> Menu for FeedsMenu<'a> {
                 self.input_buffer.push(key);
             }
             KeyCode::Enter => {
-				let selected = self.nav_list.state.selected().unwrap();
-				let selected = self.nav_list.items.get(selected).unwrap();
-				
-				return MenuState::Stories(
-					Some(selected.to_string())
-				)
-			}
+                let selected = self.channel_list.state.selected().unwrap();
+                let selected = self.channel_list.channels.get(selected).unwrap();
+                let mut dto_channel = Channel::default();
+                dto_channel.title = selected.title.clone();
+                dto_channel.link = selected.link.clone();
+                dto_channel.description = selected.description.clone();
+
+                return MenuState::Stories(Some(dto_channel));
+            }
             KeyCode::Backspace => {
                 self.input_buffer.pop();
             }
@@ -91,10 +76,10 @@ impl<'a> Menu for FeedsMenu<'a> {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        self.nav_list.navigate(key_event);
+        self.channel_list.navigate(key_event);
     }
 
-    fn get_state(&mut self) -> MenuState {
+    fn state(&mut self) -> MenuState {
         MenuState::Feeds
     }
 }

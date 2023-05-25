@@ -1,8 +1,7 @@
 use crate::util::get_text;
 use crate::{models::item::Item, util::skip_current};
-use std::io::{Read, Cursor};
-use std::{fmt::Display, fs::File, io::BufReader};
-use reqwest::Url;
+use std::io::Read;
+use std::{fmt::Display, io::BufReader};
 use xml::{reader::Error, reader::XmlEvent, EventReader};
 
 #[derive(Default, Debug)]

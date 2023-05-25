@@ -1,29 +1,30 @@
+mod contents_menu;
+mod feeds_menu;
+mod stories_menu;
 
-mod feeds;
-mod stories;
-mod contents;
+pub use self::contents_menu::ContentsMenu;
+pub use self::feeds_menu::FeedsMenu;
+pub use self::stories_menu::StoriesMenu;
 
 use std::io::Stdout;
 
-pub use self::feeds::FeedsMenu;
-pub use self::stories::StoriesMenu;
-pub use self::contents::ContentsMenu;
-
-use tui::Frame;
 use tui::backend::CrosstermBackend;
+use tui::Frame;
 
 use crossterm::event::KeyEvent;
 
+use crate::models::{Channel, Item};
+
 pub enum MenuState {
-	Feeds,
-	Stories(Option<String>),
-	Contents(Option<String>),
-	Exit
+    Feeds,
+    Stories(Option<Channel>),
+    Contents(Option<Item>),
+    Exit,
 }
 
 pub trait Menu {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
-	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
-	fn handle_key_event(&mut self, key_event: KeyEvent);
-	fn get_state(&mut self) -> MenuState;
+    fn transition(&mut self, key_event: KeyEvent) -> MenuState;
+    fn handle_key_event(&mut self, key_event: KeyEvent);
+    fn state(&mut self) -> MenuState;
 }

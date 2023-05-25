@@ -1,9 +1,5 @@
 use clap::{Args, Parser, Subcommand};
-use std::{
-    fs::File,
-    io::{BufReader, Cursor, Read},
-};
-use url::Url;
+use std::io::BufReader;
 use xml::EventReader;
 
 use crate::{models::{Item, Channel}, menus::{FeedsMenu, StoriesMenu}, util::get};
@@ -108,13 +104,13 @@ pub fn run() {
 
 	        let subscribed_channels = vec![darknet_diaries, its_foss, security_latest, hacker_news];
 
-			let feeds_menu = FeedsMenu::from(&subscribed_channels);
+			let feeds_menu = FeedsMenu::new(subscribed_channels);
 			let stories_menu = StoriesMenu::default();
 
 			let mut app = App::default();
 			app.feeds_menu = feeds_menu;
 			app.stories_menu = stories_menu;
-			app.subscribed_channels = subscribed_channels;
+			// app.subscribed_channels = subscribed_channels;
 
 			app.spawn().unwrap();
         }

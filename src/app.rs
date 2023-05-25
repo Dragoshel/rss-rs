@@ -11,17 +11,15 @@ use crossterm::terminal::{
 };
 
 use crate::menus::{ContentsMenu, FeedsMenu, Menu, MenuState, StoriesMenu};
-use crate::models::{Channel, Item};
+use crate::models::Item;
 
 pub struct App<'a> {
     pub feeds_menu: FeedsMenu<'a>,
     pub stories_menu: StoriesMenu<'a>,
-    pub contents_menu: ContentsMenu,
+    pub contents_menu: ContentsMenu<'a>,
 
     pub current_menu: MenuState,
     pub current_link: String,
-
-    pub subscribed_channels: Vec<Channel>,
 }
 
 impl<'a> Default for App<'a> {
@@ -32,9 +30,7 @@ impl<'a> Default for App<'a> {
             contents_menu: ContentsMenu::default(),
 
             current_menu: MenuState::Feeds,
-            current_link: String::new(),
-
-            subscribed_channels: vec![],
+            current_link: String::new()
         }
     }
 }
@@ -52,7 +48,7 @@ impl<'a> App<'a> {
             }
         }
 
-        menu.get_state()
+        menu.state()
     }
 
     pub fn spawn(&mut self) -> Result<()> {
@@ -65,27 +61,22 @@ impl<'a> App<'a> {
         loop {
             self.current_menu = match &self.current_menu {
                 MenuState::Feeds => Self::ui(&mut self.feeds_menu, &mut terminal),
-                MenuState::Stories(new_channel_title) => {
-                    if let Some(channel_title) = new_channel_title {
-                        for channel in &self.subscribed_channels {
-                            if channel.title == channel_title.to_string() {
-                                self.current_link = channel.link.to_string();
-                                let items = Item::read_from_url(self.current_link.clone());
-                                self.stories_menu = StoriesMenu::from(items);
-                                break;
-                            }
-                        }
+
+                MenuState::Stories(selected_channel) => {
+                    if let Some(channel) = selected_channel {
+                        let items = Item::read_from_url(channel.link.to_string());
+                        self.stories_menu = StoriesMenu::new(items);
+                        self.current_link = channel.link.to_string();
                     }
 
                     Self::ui(&mut self.stories_menu, &mut terminal)
                 }
-                MenuState::Contents(new_item_title) => {
-                    if let Some(item_title) = new_item_title {
-                    	let item = Item::read_from_url_by_title(&self.current_link, item_title.to_string());
-						let mut new_contents_menu = ContentsMenu::default();
-						new_contents_menu.item = item.unwrap();
-						self.contents_menu = new_contents_menu;
-					}
+
+                MenuState::Contents(selected_item) => {
+                    if let Some(item) = selected_item {
+                        let item = Item::read_from_url_by_title(&self.current_link, item.title.clone().unwrap()).unwrap();
+                        self.contents_menu = ContentsMenu::new(item);
+                    }
 
                     Self::ui(&mut self.contents_menu, &mut terminal)
                 }

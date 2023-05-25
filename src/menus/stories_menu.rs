@@ -6,31 +6,20 @@ use tui::terminal::Frame;
 
 use crossterm::event::{KeyCode, KeyEvent};
 
-use crate::models::Item;
-use crate::widgets::NavList;
-
 use super::{Menu, MenuState};
+
+use crate::models::Item;
+use crate::widgets::ItemList;
 
 #[derive(Default)]
 pub struct StoriesMenu<'a> {
-    nav_list: NavList<'a>,
+    item_list: ItemList<'a>,
 }
 
 impl<'a> StoriesMenu<'a> {
-	pub fn from(items: Vec<Item>) -> StoriesMenu<'a> {
-		let items = items
-			.iter()
-			.map(|i| i.title.clone().unwrap())
-			.collect();
-		
-		StoriesMenu {
-			nav_list: NavList::new("Stories", items)
-		}
-	}
-
-    pub fn new(items: Vec<String>) -> StoriesMenu<'a> {
+    pub fn new(stories: Vec<Item>) -> Self {
         StoriesMenu {
-            nav_list: NavList::new("Stories", items)
+            item_list: ItemList::new("Latest Stories", stories),
         }
     }
 }
@@ -44,24 +33,26 @@ impl<'a> Menu for StoriesMenu<'a> {
             .split(f.size());
 
         f.render_stateful_widget(
-            self.nav_list.as_render(),
+            self.item_list.as_render(),
             chunks[0],
-            &mut self.nav_list.state,
+            &mut self.item_list.state,
         );
     }
 
     fn transition(&mut self, key_event: KeyEvent) -> MenuState {
         match key_event.code {
             KeyCode::Char('q') => return MenuState::Exit,
-			KeyCode::Char('h') => return MenuState::Feeds,
+            KeyCode::Char('h') => return MenuState::Feeds,
             KeyCode::Enter => {
-				let selected = self.nav_list.state.selected().unwrap();
-				let selected = self.nav_list.items.get(selected).unwrap();
-				
-				return MenuState::Contents(
-					Some(selected.to_string())
-				)
-			}
+                let selected = self.item_list.state.selected().unwrap();
+                let selected = self.item_list.items.get(selected).unwrap();
+				let mut dto_item = Item::default();
+				dto_item.title = selected.title.clone();	
+				dto_item.link = selected.link.clone();
+				dto_item.description = selected.description.clone();
+
+                return MenuState::Contents(Some(dto_item));
+            }
             _ => {}
         }
 
@@ -69,10 +60,10 @@ impl<'a> Menu for StoriesMenu<'a> {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        self.nav_list.navigate(key_event);
+        self.item_list.navigate(key_event);
     }
 
-    fn get_state(&mut self) -> MenuState {
+    fn state(&mut self) -> MenuState {
         MenuState::Stories(None)
     }
 }
