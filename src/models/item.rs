@@ -1,40 +1,40 @@
 use crate::util::{get_text, skip_to, get};
 use std::{
-    fmt::Display,
-    io::{BufReader, Read},
+	fmt::Display,
+	io::{BufReader, Read},
 };
 
 use xml::{reader::XmlEvent, EventReader};
 
 #[derive(Default, Debug)]
 pub struct Item {
-    // OPTIONAL item elements
-    pub title: Option<String>,
-    pub link: Option<String>,
-    pub description: Option<String>,
+	// OPTIONAL item elements
+	pub title: Option<String>,
+	pub link: Option<String>,
+	pub description: Option<String>,
 
-    author: Option<String>,
-    category: Option<String>,
-    comments: Option<String>,
-    enclosure: Option<String>,
-    guid: Option<String>,
-    pub_date: Option<String>,
-    source: Option<String>,
+	author: Option<String>,
+	category: Option<String>,
+	comments: Option<String>,
+	enclosure: Option<String>,
+	guid: Option<String>,
+	pub_date: Option<String>,
+	source: Option<String>,
 }
 
 impl Display for Item {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(title) = &self.title {
-            write!(f, "Title: {}\n\n", title)?;
-        }
-        if let Some(link) = &self.link {
-            write!(f, "Link: {}\n\n", link)?;
-        }
-        if let Some(description) = &self.description {
-            write!(f, "Description: {}\n\n", description)?;
-        }
-        Ok(())
-    }
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		if let Some(title) = &self.title {
+			write!(f, "Title: {}\n\n", title)?;
+		}
+		if let Some(link) = &self.link {
+			write!(f, "Link: {}\n\n", link)?;
+		}
+		if let Some(description) = &self.description {
+			write!(f, "Description: {}\n\n", description)?;
+		}
+		Ok(())
+	}
 }
 
 impl Item {
@@ -61,9 +61,9 @@ impl Item {
 	}
 
 	pub fn read_all(
-        reader: &mut EventReader<BufReader<Box<dyn Read>>>
+		reader: &mut EventReader<BufReader<Box<dyn Read>>>
 	) -> Vec<Item> {
-        let mut items: Vec<Item> = Vec::new();
+		let mut items: Vec<Item> = Vec::new();
 
 		loop {
 			if let Ok(_) = skip_to(reader, "item") {
@@ -76,60 +76,60 @@ impl Item {
 		items
 	}
 
-    pub fn read_index(
-        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-        index: i8,
-    ) -> xml::reader::Result<Item> {
-        skip_to(reader, "item").unwrap();
+	pub fn read_index(
+		reader: &mut EventReader<BufReader<Box<dyn Read>>>,
+		index: i8,
+	) -> xml::reader::Result<Item> {
+		skip_to(reader, "item").unwrap();
 
-        for _ in 0..index {
-            skip_to(reader, "item").unwrap();
-        }
-        Ok(Item::read(reader).unwrap())
-    }
+		for _ in 0..index {
+			skip_to(reader, "item").unwrap();
+		}
+		Ok(Item::read(reader).unwrap())
+	}
 
-    pub fn read_count(
-        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-        count: i8
-    ) -> xml::reader::Result<Vec<Item>> {
-        let mut items: Vec<Item> = Vec::new();
+	pub fn read_count(
+		reader: &mut EventReader<BufReader<Box<dyn Read>>>,
+		count: i8
+	) -> xml::reader::Result<Vec<Item>> {
+		let mut items: Vec<Item> = Vec::new();
 
-        skip_to(reader, "item").unwrap();
+		skip_to(reader, "item").unwrap();
 
-        for _ in 0..count {
-            let item = Item::read(reader).unwrap();
-            items.push(item);
-            skip_to(reader, "item").unwrap();
-        }
+		for _ in 0..count {
+			let item = Item::read(reader).unwrap();
+			items.push(item);
+			skip_to(reader, "item").unwrap();
+		}
 
-        Ok(items)
-    }
+		Ok(items)
+	}
 
-    pub fn read(
-        reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-    ) -> xml::reader::Result<Item> {
-        let mut item = Item::default();
+	pub fn read(
+		reader: &mut EventReader<BufReader<Box<dyn Read>>>,
+	) -> xml::reader::Result<Item> {
+		let mut item = Item::default();
 
-        loop {
-            match reader.next() {
-                Ok(XmlEvent::StartElement { name, .. }) => {
-                    let tag_name = name.local_name.as_str();
+		loop {
+			match reader.next() {
+				Ok(XmlEvent::StartElement { name, .. }) => {
+					let tag_name = name.local_name.as_str();
 
-                    match tag_name {
-                        "title" => item.title = Some(get_text(reader).unwrap()),
-                        "link" => item.link = Some(get_text(reader).unwrap()),
-                        "description" => item.description = Some(get_text(reader).unwrap()),
-                        _ => {}
-                    }
-                }
-                Ok(XmlEvent::EndElement { name }) => {
-                    if name.local_name == "item" {
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(item)
-    }
+					match tag_name {
+						"title" => item.title = Some(get_text(reader).unwrap()),
+						"link" => item.link = Some(get_text(reader).unwrap()),
+						"description" => item.description = Some(get_text(reader).unwrap()),
+						_ => {}
+					}
+				}
+				Ok(XmlEvent::EndElement { name }) => {
+					if name.local_name == "item" {
+						break;
+					}
+				}
+				_ => {}
+			}
+		}
+		Ok(item)
+	}
 }

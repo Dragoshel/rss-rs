@@ -8,5 +8,5 @@ mod menus;
 use cli::run;
 
 fn main() {
-    run();
+	run();
 }

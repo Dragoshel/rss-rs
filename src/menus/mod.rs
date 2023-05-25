@@ -16,15 +16,15 @@ use crossterm::event::KeyEvent;
 use crate::models::{Channel, Item};
 
 pub enum MenuState {
-    Feeds,
-    Stories(Option<Channel>),
-    Contents(Option<Item>),
-    Exit,
+	Feeds,
+	Stories(Option<Channel>),
+	Contents(Option<Item>),
+	Exit,
 }
 
 pub trait Menu {
-    fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
-    fn transition(&mut self, key_event: KeyEvent) -> MenuState;
-    fn handle_key_event(&mut self, key_event: KeyEvent);
-    fn state(&mut self) -> MenuState;
+	fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
+	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
+	fn handle_key_event(&mut self, key_event: KeyEvent);
+	fn state(&mut self) -> MenuState;
 }
