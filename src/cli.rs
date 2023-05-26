@@ -1,8 +1,6 @@
 use clap::{Args, Parser, Subcommand};
-use std::io::BufReader;
-use xml::EventReader;
 
-use crate::{models::{Item, Channel}, menus::{FeedsMenu, StoriesMenu}, util::get};
+use crate::{models::Channel, menus::{FeedsMenu, StoriesMenu}};
 use crate::app::App;
 
 #[derive(Parser)]
@@ -43,49 +41,8 @@ struct ReadCommand {
 struct WriteCommand {}
 
 pub fn run() {
-	let cli = Cli::parse();
-
-	match cli.command {
-		Some(Command::Read(command)) => {
-			let url = command.url;
-			let reader = BufReader::new(get(url));
-			let mut reader = EventReader::new(reader);
-
-			match command.items {
-				Some(count) => {
-					let items = Item::read_count(&mut reader, count as i8).unwrap();
-
-					for item in items {
-						println!("---------------");
-						println!("{item}\n");
-					}
-
-					return;
-				}
-				_ => {}
-			}
-
-			match command.item {
-				Some(index) => {
-					let item = Item::read_index(&mut reader, index as i8).unwrap();
-					println!("{item}");
-					return;
-				}
-				_ => {}
-			}
-
-			let channel: Channel;
-			if command.verbose {
-				channel = Channel::read_all(&mut reader).unwrap();
-				println!("{channel}");
-			} else {
-				channel = Channel::read_required(&mut reader).unwrap();
-				println!("{channel}");
-			}
-		}
-		Some(Command::Write(_command)) => todo!(),
+	match Cli::parse().command {
 		None => {
-
 			let mut darknet_diaries = Channel::default();
 			darknet_diaries.title = String::from("Darknet Diaries");
 			darknet_diaries.link = String::from("https://feeds.megaphone.fm/darknetdiaries");
@@ -113,6 +70,52 @@ pub fn run() {
 			// app.subscribed_channels = subscribed_channels;
 
 			app.spawn().unwrap();
-		}
+		},
+		_ => {}
+		// Some(Command::Read(command)) => {
+		// 	let url = command.url;
+
+	
+		// 	Url::parse(url.as_str())
+
+
+
+
+		// 	let reader = BufReader::new(fetch_http(url));
+		// 	let mut reader = EventReader::new(reader);
+
+		// 	match command.items {
+		// 		Some(count) => {
+		// 			let items = Item::read_count(&mut reader, count as i8).unwrap();
+
+		// 			for item in items {
+		// 				println!("---------------");
+		// 				println!("{item}\n");
+		// 			}
+
+		// 			return;
+		// 		}
+		// 		_ => {}
+		// 	}
+
+		// 	match command.item {
+		// 		Some(index) => {
+		// 			let item = Item::read_index(&mut reader, index as i8).unwrap();
+		// 			println!("{item}");
+		// 			return;
+		// 		}
+		// 		_ => {}
+		// 	}
+
+		// 	let channel: Channel;
+		// 	if command.verbose {
+		// 		channel = Channel::read_all(&mut reader).unwrap();
+		// 		println!("{channel}");
+		// 	} else {
+		// 		channel = Channel::read_required(&mut reader).unwrap();
+		// 		println!("{channel}");
+		// 	}
+		// }
+		// Some(Command::Write(_command)) => todo!(),
 	}
 }

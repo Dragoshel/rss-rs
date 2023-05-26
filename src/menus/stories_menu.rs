@@ -48,8 +48,6 @@ impl<'a> Menu for StoriesMenu<'a> {
 				let selected = self.item_list.items.get(selected).unwrap();
 				let mut dto_item = Item::default();
 				dto_item.title = selected.title.clone();	
-				dto_item.link = selected.link.clone();
-				dto_item.description = selected.description.clone();
 
 				return MenuState::Contents(Some(dto_item));
 			}

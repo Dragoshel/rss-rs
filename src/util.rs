@@ -1,65 +1,77 @@
-use std::{io::{BufReader, Read, Cursor}, fs::File};
+use std::fs::File;
+use std::io::{BufReader, Cursor};
 
-use reqwest::Url;
 use xml::{reader::XmlEvent, EventReader};
 
-pub fn get_text(reader: &mut EventReader<BufReader<Box<dyn Read>>>) -> Option<String> {
-	loop {
-		match reader.next() {
-			Ok(XmlEvent::CData(text)) => return Some(text.to_string()),
-			Ok(XmlEvent::Characters(text)) => return Some(text.to_string()),
-			Ok(XmlEvent::Whitespace(_)) => continue,
-			_ => break,
-		}
-	}
-	None
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("failed fetching data")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("failed while trying to parse xml")]
+    XmlReader(#[from] xml::reader::Error),
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn read_text(
+    reader: &mut EventReader<BufReader<Cursor<String>>>,
+) -> xml::reader::Result<Option<String>> {
+    loop {
+        match reader.next() {
+            Ok(XmlEvent::CData(text)) => return Ok(Some(text)),
+            Ok(XmlEvent::Characters(text)) => return Ok(Some(text)),
+            Ok(XmlEvent::Whitespace(_)) => {}
+            Err(error) => return Err(error),
+            _ => return Ok(None),
+        }
+    }
+}
+
+// [TODO]
+// Use the library skip instead
 pub fn skip_to(
-	reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-	tag_name: &str,
-) -> Result<(), String> {
-	loop {
-		match reader.next() {
-			Ok(XmlEvent::StartElement { name, .. }) => {
-				if name.local_name == tag_name {
-					return Ok(());
-				}
-			}
-			Ok(XmlEvent::EndDocument) => return Err("reached end".to_string()),
-			Err(error) => return Err(error.msg().to_string()),
-			_ => {}
-		}
-	}
+    reader: &mut EventReader<BufReader<Cursor<String>>>,
+    tag_name: &str,
+) -> xml::reader::Result<Option<()>> {
+    loop {
+        match reader.next() {
+            Ok(XmlEvent::StartElement { name, .. }) => {
+                if name.local_name == tag_name {
+                    return Ok(Some(()));
+                }
+            }
+            Ok(XmlEvent::EndDocument) => return Ok(None),
+            Err(error) => return Err(error),
+            _ => {}
+        }
+    }
 }
 
 pub fn skip_current(
-	reader: &mut EventReader<BufReader<Box<dyn Read>>>,
-	current_tag_name: &str,
-) -> Result<(), &'static str> {
-	loop {
-		match reader.next() {
-			Ok(XmlEvent::EndElement { name }) => {
-				if name.local_name == current_tag_name {
-					return Ok(());
-				}
-			}
-			_ => {}
-		}
-	}
+    reader: &mut EventReader<BufReader<Cursor<String>>>,
+    tag_name: &str,
+) -> xml::reader::Result<()> {
+    loop {
+        match reader.next() {
+            Ok(XmlEvent::EndElement { name }) => {
+                if name.local_name == tag_name {
+                    return Ok(());
+                }
+            }
+            Err(error) => return Err(error),
+            _ => {}
+        }
+    }
 }
 
-pub fn get(url_or_local_path: String) -> Box<dyn Read> {
-	if let Ok(_) = Url::parse(url_or_local_path.as_str()) {
-		let body = reqwest::blocking::get(url_or_local_path)
-			.unwrap()
-			.text()
-			.unwrap();
-		let cursor = Cursor::new(body);
+pub fn fetch_file(url: &str) -> xml::reader::Result<File> {
+    let file = File::open(url)?;
+    Ok(file)
+}
 
-		Box::new(cursor)
-	} else {
-		let file = File::open(url_or_local_path).unwrap();
-		Box::new(file)
-	}
+pub fn fetch_http(url: &str) -> reqwest::Result<Cursor<String>> {
+    let body = reqwest::blocking::get(url)?.text()?;
+    Ok(Cursor::new(body))
 }

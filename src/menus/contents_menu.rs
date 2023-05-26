@@ -19,11 +19,7 @@ pub struct ContentsMenu<'a> {
 impl<'a> ContentsMenu<'a> {
 	pub fn new(item: Item) -> Self {
 		ContentsMenu {
-			text_box: TextBox {
-				title: "Contents",
-				text: item.description.unwrap().to_string(),
-				scroll: 0,
-			},
+			text_box: TextBox::new("Contents", item.description.unwrap().to_string())
 		}
 	}
 }
