@@ -3,11 +3,14 @@ use std::{fmt::Display, io::BufReader};
 
 use xml::{reader::XmlEvent, EventReader};
 
-use crate::util::read_text;
-use crate::{models::item::Item, util::skip_current};
+use serde::{Deserialize, Serialize};
+
+use crate::util::{read_text, fetch_http};
+use crate::models::item::Item;
+
 
 #[allow(unused)]
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Channel {
     // REQUIRED channel elements
     pub title: String,
@@ -81,11 +84,18 @@ impl Display for Channel {
 }
 
 impl Channel {
+	pub fn fetch_required(url: &str) -> crate::Result<Channel> {
+        let body = fetch_http(url)?;
+        let reader = BufReader::new(body);
+        let mut reader = EventReader::new(reader);
+		
+		Self::read_required(&mut reader)
+	}
+
     pub fn read_required(
         reader: &mut EventReader<BufReader<Cursor<String>>>,
     ) -> crate::Result<Channel> {
         let mut channel = Channel::default();
-
         loop {
             match reader.next() {
                 Ok(XmlEvent::StartElement { name, .. }) => {
@@ -117,17 +127,17 @@ impl Channel {
                         }
 
                         // Currently skipping over item
-                        "item" => skip_current(reader, "item")?,
+                        "item" => reader.skip()?,
                         // Currently skipping over image
-                        "image" => skip_current(reader, "image")?,
+                        "image" => reader.skip()?,
                         // Currently skipping over rating
-                        "rating" => skip_current(reader, "rating")?,
+                        "rating" => reader.skip()?,
                         // Currently skipping over text_input
-                        "text_input" => skip_current(reader, "text_input")?,
+                        "text_input" => reader.skip()?,
                         // Currently skipping over skip_hours
-                        "skip_hours" => skip_current(reader, "skip_hours")?,
+                        "skip_hours" => reader.skip()?,
                         // Currently skipping over skip_days
-                        "skip_days" => skip_current(reader, "skip_days")?,
+                        "skip_days" => reader.skip()?,
                         _ => {}
                     }
                 }

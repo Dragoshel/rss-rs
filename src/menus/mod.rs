@@ -25,6 +25,5 @@ pub enum MenuState {
 pub trait Menu {
 	fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
 	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
-	fn handle_key_event(&mut self, key_event: KeyEvent);
 	fn state(&mut self) -> MenuState;
 }

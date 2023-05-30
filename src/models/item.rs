@@ -4,10 +4,12 @@ use std::{fmt::Display, io::Cursor};
 use xml::reader::XmlEvent;
 use xml::EventReader;
 
+use serde::{Deserialize, Serialize};
+
 use crate::util::{fetch_http, read_text, skip_to};
 
 #[allow(unused)]
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Item {
     // OPTIONAL item elements
     pub title: Option<String>,
@@ -44,21 +46,16 @@ impl Item {
         let reader = BufReader::new(body);
         let mut reader = EventReader::new(reader);
 
-        // [TODO]
-        // Improve this code
-        // * uneccesary code
         loop {
-            match skip_to(&mut reader, "item") {
-                Ok(Some(())) => {
-                    let item = Self::read_single(&mut reader)?;
-                    if let Some(item_title) = item.title.clone() {
-                        if item_title == title {
-                            return Ok(Some(item));
-                        }
+            if let Some(()) = skip_to(&mut reader, "item")? {
+                let item = Self::read_single(&mut reader)?;
+                if let Some(item_title) = item.title.clone() {
+                    if item_title == title {
+                        return Ok(Some(item));
                     }
                 }
-                Ok(None) => return Ok(None),
-                Err(error) => return Err(crate::Error::from(error)),
+            } else {
+                return Ok(None);
             }
         }
     }

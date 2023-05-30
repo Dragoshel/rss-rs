@@ -40,10 +40,7 @@ impl<'a> App<'a> {
         terminal.draw(|f| menu.draw(f)).unwrap();
 
         if poll(Duration::from_millis(500)).unwrap() {
-            let event = read();
-            if let Ok(Event::Key(key_event)) = event {
-                menu.handle_key_event(key_event);
-
+            if let Ok(Event::Key(key_event)) = read() {
                 return menu.transition(key_event);
             }
         }
@@ -76,19 +73,12 @@ impl<'a> App<'a> {
 
                 MenuState::Contents(selected_item) => {
                     if let Some(item) = selected_item {
-// [TODO]						
-// What happens if you select an
-// Item which doesn't have a title?
-						let title = if let Some(title) = item.title.clone() {
-							title
-						} else {
-							String::new()
-						};
-
-// [TODO]						
-// Check if item was found
+						let title = item.title.clone().unwrap_or_default();
                         let item = Item::fetch_single_by_title(self.current_link.as_str(), title.as_str())?;
-                        self.contents_menu = ContentsMenu::new(item.unwrap());
+
+						if let Some(_) = item {
+	                        self.contents_menu = ContentsMenu::new(item.unwrap());
+						}
                     }
 
                     Self::ui(&mut self.contents_menu, &mut terminal)
