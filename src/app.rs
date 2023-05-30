@@ -22,20 +22,23 @@ pub struct App<'a> {
     pub current_link: String,
 }
 
-impl<'a> Default for App<'a> {
-    fn default() -> Self {
+impl<'a> App<'a> {
+	pub fn new() -> Self {
         App {
-            feeds_menu: FeedsMenu::default(),
+            feeds_menu: FeedsMenu::new("Your Feeds"),
             stories_menu: StoriesMenu::default(),
             contents_menu: ContentsMenu::default(),
 
             current_menu: MenuState::Feeds,
             current_link: String::new(),
         }
-    }
-}
+	}
 
-impl<'a> App<'a> {
+	pub fn init(&mut self) -> crate::Result<()> {
+		self.feeds_menu.init()?;
+		Ok(())
+	}
+
     fn ui<M: Menu>(menu: &mut M, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> MenuState {
         terminal.draw(|f| menu.draw(f)).unwrap();
 
@@ -47,7 +50,7 @@ impl<'a> App<'a> {
         menu.state()
     }
 
-    pub fn spawn(&mut self) -> crate::Result<()> {
+    pub fn run(&mut self) -> crate::Result<()> {
         enable_raw_mode().unwrap();
         let mut stdout = stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
@@ -60,8 +63,8 @@ impl<'a> App<'a> {
 
                 MenuState::Stories(selected_channel) => {
                     if let Some(channel) = selected_channel {
-						let title = channel.title.to_string();
-						let link = channel.link.to_string();
+                        let title = channel.title.to_string();
+                        let link = channel.link.to_string();
                         let items = Item::fetch_all(link.as_str())?;
 
                         self.stories_menu = StoriesMenu::new(items);
@@ -73,12 +76,15 @@ impl<'a> App<'a> {
 
                 MenuState::Contents(selected_item) => {
                     if let Some(item) = selected_item {
-						let title = item.title.clone().unwrap_or_default();
-                        let item = Item::fetch_single_by_title(self.current_link.as_str(), title.as_str())?;
+                        let title = item.title.clone().unwrap_or_default();
+                        let item = Item::fetch_single_by_title(
+                            self.current_link.as_str(),
+                            title.as_str(),
+                        )?;
 
-						if let Some(_) = item {
-	                        self.contents_menu = ContentsMenu::new(item.unwrap());
-						}
+                        if let Some(_) = item {
+                            self.contents_menu = ContentsMenu::new(item.unwrap());
+                        }
                     }
 
                     Self::ui(&mut self.contents_menu, &mut terminal)
@@ -96,7 +102,8 @@ impl<'a> App<'a> {
             terminal.backend_mut(),
             LeaveAlternateScreen,
             DisableMouseCapture
-        ).unwrap();
+        )
+        .unwrap();
         terminal.show_cursor().unwrap();
 
         Ok(())

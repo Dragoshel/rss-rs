@@ -44,47 +44,8 @@ struct ReadCommand {
 struct WriteCommand {}
 
 pub fn run() {
-    match Cli::parse().command {
-        None => {
+    let mut app = App::new();
 
-			let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
-			let database = client.database("Rss");
-			let collection = database.collection::<Channel>("channels");
-			let mut subscribed_channels:Vec<Channel> = Vec::new();
-
-			let mut cursor = collection.find(None, None).unwrap();
-
-			while cursor.advance().unwrap() {
-				let channel = cursor.deserialize_current().unwrap();
-				subscribed_channels.push(channel);
-			}
-	
-            // let mut darknet_diaries = Channel::default();
-            // darknet_diaries.title = String::from("Darknet Diaries");
-            // darknet_diaries.link = String::from("https://feeds.megaphone.fm/darknetdiaries");
-
-            // let mut its_foss = Channel::default();
-            // its_foss.title = String::from("It's FOSS");
-            // its_foss.link = String::from("https://itsfoss.com/rss/");
-
-            // let mut security_latest = Channel::defautl();
-            // security_latest.title = String::from("Security Latest");
-            // security_latest.link = String::from("https://www.wired.com/feed/category/security/latest/rss");
-
-            // let mut hacker_news = Channel::default();
-            // hacker_news.title = String::from("Hacker News");
-            // hacker_news.link = String::from("https://news.ycombinator.com/rss");
-
-			// collection.insert_many(vec![darknet_diaries, its_foss, security_latest, hacker_news], None).unwrap();
-
-            // let feeds_menu = FeedsMenu::new(subscribed_channels);
-
-            let mut app = App::default();
-            app.feeds_menu = FeedsMenu::new(subscribed_channels);
-            // app.subscribed_channels = subscribed_channels;
-
-            app.spawn().unwrap();
-        }
-        _ => {}
-    }
+	app.init().unwrap();
+    app.run().unwrap();
 }

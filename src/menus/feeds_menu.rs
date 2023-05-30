@@ -1,5 +1,6 @@
 use std::io::Stdout;
 
+use mongodb::sync::Client;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Modifier, Style};
@@ -13,13 +14,6 @@ use crate::models::Channel;
 use crate::util::centered_rect;
 
 use super::{Menu, MenuState};
-
-#[derive(Default)]
-enum PopupState {
-    #[default]
-    Editing,
-    Choosing,
-}
 
 #[derive(Clone, Copy, Default)]
 enum PopupChoice {
@@ -35,7 +29,6 @@ pub struct FeedsMenu<'a> {
     state: ListState,
 
     popup_title: &'a str,
-    popup_state: PopupState,
     popup_feed: Option<Channel>,
     popup_fetched: bool,
     popup_input: String,
@@ -44,17 +37,16 @@ pub struct FeedsMenu<'a> {
 }
 
 impl<'a> FeedsMenu<'a> {
-    pub fn new(feeds: Vec<Channel>) -> Self {
+    pub fn new(title: &'a str) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
 
         FeedsMenu {
-            title: "Your Subscribed Feeds",
-            feeds,
+            title,
+            feeds: vec![],
             state,
 
             popup_title: "Search for a Feed",
-            popup_state: PopupState::Editing,
             popup_feed: None,
             popup_fetched: false,
             popup_input: String::new(),
@@ -63,11 +55,21 @@ impl<'a> FeedsMenu<'a> {
         }
     }
 
-    fn clear(&mut self) {
-        self.popped = false;
-        self.popup_fetched = false;
-        self.popup_input = String::new();
-    }
+	pub fn init(&mut self) -> crate::Result<()> {
+		let client = Client::with_uri_str("mongodb://localhost:27017")?;
+		let database = client.database("Rss");
+		let collection = database.collection::<Channel>("channels");
+		let mut cursor = collection.find(None, None).unwrap();
+		let mut feeds:Vec<Channel> = vec![];
+
+		while cursor.advance()? {
+			let channel = cursor.deserialize_current()?;
+			feeds.push(channel);
+		}
+		self.feeds = feeds;
+
+		Ok(())
+	}
 
     fn next(&mut self) {
         let i = match self.state.selected() {
@@ -97,10 +99,16 @@ impl<'a> FeedsMenu<'a> {
         self.state.select(Some(i));
     }
 
+    fn exit_popup(&mut self) {
+        self.popped = false;
+        self.popup_fetched = false;
+        self.popup_input = String::new();
+    }
+
     fn handle_popup_events(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => {
-                self.clear();
+                self.exit_popup();
             }
 
             KeyCode::Char(c) => {
@@ -126,10 +134,17 @@ impl<'a> FeedsMenu<'a> {
                     match self.popup_choice {
                         PopupChoice::Back => {}
                         PopupChoice::Subscribe => {
-                            // Insert into database MONOGO DBBB
+                            let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+                            let database = client.database("Rss");
+                            let collection = database.collection::<Channel>("channels");
+
+                            if let Some(channel) = &self.popup_feed {
+                                collection.insert_one(channel, None).unwrap();
+                            }
+							self.init().unwrap();
                         }
                     }
-                    self.clear();
+                    self.exit_popup();
                 } else {
                     match Channel::fetch_required(&self.popup_input) {
                         Ok(channel) => {
@@ -182,7 +197,7 @@ impl<'a> Menu for FeedsMenu<'a> {
                 .split(popup_area);
 
             let mut input_container = Block::default()
-                .title(self.title)
+                .title(self.popup_title)
                 .borders(Borders::ALL)
                 .style(Style::default().bg(Color::Blue));
             let input_chunks = Layout::default()

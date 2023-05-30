@@ -8,10 +8,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("failed fetching data")]
+    #[error("ERROR: could not fetch data")]
     Reqwest(#[from] reqwest::Error),
-    #[error("failed while trying to parse xml")]
+
+    #[error("ERROR: could not parse xml document")]
     XmlReader(#[from] xml::reader::Error),
+
+	#[error("ERROR: could not interact with Mongo Db")]
+	MongoDb(#[from] mongodb::error::Error)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
