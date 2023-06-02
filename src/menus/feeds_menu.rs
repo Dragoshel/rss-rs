@@ -1,25 +1,26 @@
 use std::io::Stdout;
+use std::ops::Deref;
 
-use mongodb::sync::Client;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
-use tui::text::Spans;
+use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::models::Channel;
-use crate::util::centered_rect;
+use crate::mongo::{delete_feed, get_all_feeds, insert_feed};
+use crate::util::{centered_rect, one_dark};
 
 use super::{Menu, MenuState};
 
 #[derive(Clone, Copy, Default)]
 enum PopupChoice {
     #[default]
-    Back = 0,
-    Subscribe = 1,
+    Back,
+    Subscribe,
 }
 
 #[derive(Default)]
@@ -38,13 +39,10 @@ pub struct FeedsMenu<'a> {
 
 impl<'a> FeedsMenu<'a> {
     pub fn new(title: &'a str) -> Self {
-        let mut state = ListState::default();
-        state.select(Some(0));
-
         FeedsMenu {
             title,
             feeds: vec![],
-            state,
+            state: ListState::default(),
 
             popup_title: "Search for a Feed",
             popup_feed: None,
@@ -55,23 +53,17 @@ impl<'a> FeedsMenu<'a> {
         }
     }
 
-	pub fn init(&mut self) -> crate::Result<()> {
-		let client = Client::with_uri_str("mongodb://localhost:27017")?;
-		let database = client.database("Rss");
-		let collection = database.collection::<Channel>("channels");
-		let mut cursor = collection.find(None, None).unwrap();
-		let mut feeds:Vec<Channel> = vec![];
-
-		while cursor.advance()? {
-			let channel = cursor.deserialize_current()?;
-			feeds.push(channel);
-		}
-		self.feeds = feeds;
-
-		Ok(())
-	}
+    pub fn init(&mut self) -> crate::Result<()> {
+        self.feeds = get_all_feeds()?;
+        Ok(())
+    }
 
     fn next(&mut self) {
+        if self.feeds.is_empty() {
+            self.state.select(None);
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.feeds.len() - 1 {
@@ -86,6 +78,11 @@ impl<'a> FeedsMenu<'a> {
     }
 
     fn previous(&mut self) {
+        if self.feeds.is_empty() {
+            self.state.select(None);
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -131,26 +128,27 @@ impl<'a> FeedsMenu<'a> {
 
             KeyCode::Enter => {
                 if self.popup_fetched {
+                    // SUBSCRIBING TO URL
                     match self.popup_choice {
                         PopupChoice::Back => {}
                         PopupChoice::Subscribe => {
-                            let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
-                            let database = client.database("Rss");
-                            let collection = database.collection::<Channel>("channels");
-
                             if let Some(channel) = &self.popup_feed {
-                                collection.insert_one(channel, None).unwrap();
+                                insert_feed(channel).unwrap();
                             }
-							self.init().unwrap();
+                            self.init().unwrap();
                         }
                     }
                     self.exit_popup();
                 } else {
+                    // FETCHING FEED BY URL
                     match Channel::fetch_required(&self.popup_input) {
-                        Ok(channel) => {
+                        Ok(mut channel) => {
+                            channel.rss_link = Some(self.popup_input.to_string());
                             self.popup_feed = Some(channel);
                         }
                         Err(error) => {
+                            // [TODO]
+                            // CHANGE TO PROPER ERROR REPORTING
                             let mut error_channel = Channel::default();
                             error_channel.title = error.to_string();
                             self.popup_feed = Some(error_channel);
@@ -169,45 +167,107 @@ impl<'a> Menu for FeedsMenu<'a> {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .margin(2)
-            .constraints([Constraint::Percentage(100)])
+            .margin(5)
+            .constraints([Constraint::Percentage(25), Constraint::Percentage(80)])
             .split(f.size());
 
-        // FEEDS MENU
+        // COMMANDS BOX
+        let block = Block::default().title("Commands").borders(Borders::ALL);
+
+        f.render_widget(block, chunks[0]);
+
+        let subscribe_spans = Spans::from(vec![
+            Span::styled("s     ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("subscribe to a new feed"),
+        ]);
+
+        let help_chunks = Layout::default()
+            .constraints(vec![Constraint::Percentage(100)])
+            .margin(2)
+            .split(chunks[0]);
+
+        let delete_spans = Spans::from(vec![
+            Span::styled("d     ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("delete a feed"),
+        ]);
+
+        let enter_spans = Spans::from(vec![
+            Span::styled("ENTER ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("load news"),
+        ]);
+
+        let arrows_spans = Spans::from(vec![
+            Span::styled("↑ ↓   ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("navigate UP and DOWN"),
+        ]);
+
+        let quit_spans = Spans::from(vec![
+            Span::styled("ESC   ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("quit"),
+        ]);
+
+        let paragraph = Paragraph::new(vec![
+            subscribe_spans,
+            delete_spans,
+            enter_spans,
+            Spans::from(""),
+            arrows_spans,
+            quit_spans,
+        ])
+        .wrap(Wrap { trim: true });
+
+        f.render_widget(paragraph, help_chunks[0]);
+        // COMMANDS BOX
+
+        // FEEDS LIST
+        let block = Block::default().title(self.title).borders(Borders::ALL);
+
+        f.render_widget(block, chunks[1]);
+
+        let feeds_chunks = Layout::default()
+            .constraints(vec![Constraint::Percentage(100)])
+            .margin(2)
+            .split(chunks[1]);
+
         let channels: Vec<ListItem> = self
             .feeds
             .iter()
             .map(|c| ListItem::new(c.title.to_string()))
             .collect();
-        let block = Block::default().title(self.title).borders(Borders::ALL);
+
         let list = List::new(channels)
-            .block(block)
             .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-            .highlight_symbol(">>");
+            .highlight_symbol("> ");
 
-        f.render_stateful_widget(list, chunks[0], &mut self.state);
-        // FEEDS MENU
+        f.render_stateful_widget(list, feeds_chunks[0], &mut self.state);
+        // FEEDS LIST
 
         // POPUP
         if self.popped {
-            let popup_area = centered_rect(50, 50, chunks[0]);
+            let popup_area = centered_rect(40, 30, f.size());
+
             let chunks = Layout::default()
-                .constraints(vec![Constraint::Percentage(30), Constraint::Percentage(70)])
+                .constraints(vec![Constraint::Percentage(35), Constraint::Percentage(65)])
                 .split(popup_area);
 
             let mut input_container = Block::default()
                 .title(self.popup_title)
                 .borders(Borders::ALL)
                 .style(Style::default().bg(Color::Blue));
+
             let input_chunks = Layout::default()
                 .constraints(vec![Constraint::Percentage(100)])
                 .margin(1)
+				.horizontal_margin(3)
                 .split(chunks[0]);
+
             let input_block = Block::default().borders(Borders::ALL);
+
             let input = Paragraph::new(self.popup_input.to_string())
                 .wrap(Wrap { trim: true })
                 .block(input_block);
+
             f.render_widget(input, input_chunks[0]);
 
             if self.popup_fetched {
@@ -217,6 +277,7 @@ impl<'a> Menu for FeedsMenu<'a> {
                 let channel_container = Block::default()
                     .borders(Borders::BOTTOM | Borders::RIGHT | Borders::LEFT)
                     .style(Style::default().bg(Color::Blue));
+
                 f.render_widget(channel_container, chunks[1]);
 
                 let channel_chunks = Layout::default()
@@ -225,7 +286,8 @@ impl<'a> Menu for FeedsMenu<'a> {
                         Constraint::Percentage(60),
                         Constraint::Percentage(20),
                     ])
-                    .margin(2)
+                    .margin(1)
+					.horizontal_margin(3)
                     .split(chunks[1]);
 
                 if let Some(channel) = &self.popup_feed {
@@ -243,7 +305,7 @@ impl<'a> Menu for FeedsMenu<'a> {
                     .highlight_style(
                         Style::default()
                             .add_modifier(Modifier::BOLD)
-                            .bg(Color::Black),
+                            .bg(one_dark(Color::Black)),
                     );
                 f.render_widget(tabs, channel_chunks[2]);
             }
@@ -274,11 +336,22 @@ impl<'a> Menu for FeedsMenu<'a> {
                     self.popped = true;
                 }
 
+                KeyCode::Char('d') => {
+                    if let Some(selected_state) = self.state.selected() {
+                        let selected_feed = self.feeds.get(selected_state);
+
+                        if let Some(selected) = selected_feed {
+                            delete_feed(selected.title.deref()).unwrap();
+                        }
+                    }
+                    self.init().unwrap();
+                }
+
                 KeyCode::Enter => {
                     if let Some(selected_state) = self.state.selected() {
-                        let selected_story = self.feeds.get(selected_state);
+                        let selected_feed = self.feeds.get(selected_state);
 
-                        if let Some(selected) = selected_story {
+                        if let Some(selected) = selected_feed {
                             return MenuState::Stories(Some(selected.clone()));
                         }
                     }

@@ -16,12 +16,12 @@ pub struct Item {
     pub link: Option<String>,
     pub description: Option<String>,
 
-    author: Option<String>,
+    pub author: Option<String>,
     category: Option<String>,
     comments: Option<String>,
     enclosure: Option<String>,
     guid: Option<String>,
-    pub_date: Option<String>,
+    pub pubDate: Option<String>,
     source: Option<String>,
 }
 
@@ -107,32 +107,4 @@ impl Item {
         }
         Ok(item)
     }
-    // pub fn read_index(
-    //     reader: &mut EventReader<BufReader<Cursor<String>>>,
-    //     index: i8,
-    // ) -> xml::reader::Result<Item> {
-    //     skip_to(reader, "item").unwrap();
-
-    //     for _ in 0..index {
-    //         skip_to(reader, "item").unwrap();
-    //     }
-    //     Ok(Item::read(reader).unwrap())
-    // }
-
-    // pub fn read_count(
-    //     reader: &mut EventReader<BufReader<Cursor<String>>>,
-    //     count: i8,
-    // ) -> xml::reader::Result<Vec<Item>> {
-    //     let mut items: Vec<Item> = Vec::new();
-
-    //     skip_to(reader, "item").unwrap();
-
-    //     for _ in 0..count {
-    //         let item = Item::read(reader).unwrap();
-    //         items.push(item);
-    //         skip_to(reader, "item").unwrap();
-    //     }
-
-    //     Ok(items)
-    // }
 }

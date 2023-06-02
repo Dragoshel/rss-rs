@@ -18,6 +18,7 @@ pub struct Channel {
     pub description: String,
 
     // OPTIONAL channel elements
+    pub rss_link: Option<String>,
     language: Option<String>,
     copyright: Option<String>,
     managing_editor: Option<String>,

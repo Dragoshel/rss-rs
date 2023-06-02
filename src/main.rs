@@ -3,6 +3,7 @@ mod models;
 mod util;
 mod app;
 mod menus;
+mod mongo;
 
 pub use self::util::Error;
 pub use self::util::Result;

@@ -2,9 +2,25 @@ use std::fs::File;
 use std::io::{BufReader, Cursor};
 
 use tui::layout::{Layout, Direction, Constraint, Rect};
+use tui::style::Color;
+
 use xml::{reader::XmlEvent, EventReader};
 
 use thiserror::Error;
+
+pub fn one_dark(color: Color) -> Color {
+	match color {
+		Color::Black => Color::Rgb(40, 44, 52),
+		Color::Red => Color::Rgb(224, 108, 117),
+		Color::Green => Color::Rgb(152, 195, 121),
+		Color::Yellow => Color::Rgb(229, 192, 123),
+		Color::Blue => Color::Rgb(97, 175, 239),
+		Color::Magenta => Color::Rgb(198, 120, 221),
+		Color::LightBlue => Color::Rgb(86, 182, 194),
+		Color::White => Color::Rgb(171, 178, 191),
+		_ => color
+	}
+}
 
 #[derive(Error, Debug)]
 pub enum Error {

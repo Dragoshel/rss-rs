@@ -1,5 +1,7 @@
 use tui::backend::CrosstermBackend;
 use tui::Terminal;
+use tui::style::{Style, Color};
+use tui::widgets::Block;
 
 use std::io::{stdout, Stdout};
 use std::time::Duration;
@@ -12,11 +14,12 @@ use crossterm::terminal::{
 
 use crate::menus::{ContentsMenu, FeedsMenu, Menu, MenuState, StoriesMenu};
 use crate::models::Item;
+use crate::util::one_dark;
 
 pub struct App<'a> {
     pub feeds_menu: FeedsMenu<'a>,
     pub stories_menu: StoriesMenu<'a>,
-    pub contents_menu: ContentsMenu<'a>,
+    pub contents_menu: ContentsMenu,
 
     pub current_menu: MenuState,
     pub current_link: String,
@@ -40,7 +43,14 @@ impl<'a> App<'a> {
 	}
 
     fn ui<M: Menu>(menu: &mut M, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> MenuState {
-        terminal.draw(|f| menu.draw(f)).unwrap();
+        terminal.draw(|f| {
+			let background = Block::default()
+				.style(Style::default()
+				.bg(one_dark(Color::Black)));
+			f.render_widget(background, f.size());
+
+			menu.draw(f);
+		}).unwrap();
 
         if poll(Duration::from_millis(500)).unwrap() {
             if let Ok(Event::Key(key_event)) = read() {
@@ -59,21 +69,25 @@ impl<'a> App<'a> {
 
         loop {
             self.current_menu = match &self.current_menu {
-                MenuState::Feeds => Self::ui(&mut self.feeds_menu, &mut terminal),
+            	// TRANSITION FOR FEEDS MENU
+                MenuState::Feeds => {
+					Self::ui(&mut self.feeds_menu, &mut terminal)
+				}
 
+            	// TRANSITION FOR STORIES MENU
                 MenuState::Stories(selected_channel) => {
                     if let Some(channel) = selected_channel {
-                        let title = channel.title.to_string();
-                        let link = channel.link.to_string();
-                        let items = Item::fetch_all(link.as_str())?;
+                        let rss_link = channel.clone().rss_link.unwrap();
+                        let items = Item::fetch_all(rss_link.as_str())?;
 
                         self.stories_menu = StoriesMenu::new(items);
-                        self.current_link = link;
+                        self.current_link = rss_link;
                     }
 
                     Self::ui(&mut self.stories_menu, &mut terminal)
                 }
 
+            	// TRANSITION FOR CONTENTS MENU
                 MenuState::Contents(selected_item) => {
                     if let Some(item) = selected_item {
                         let title = item.title.clone().unwrap_or_default();

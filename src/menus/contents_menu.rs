@@ -10,66 +10,110 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use crate::models::Item;
+use crate::util::one_dark;
 
 use super::{Menu, MenuState};
 
 #[derive(Default)]
-pub struct ContentsMenu<'a> {
-    title: &'a str,
-    text: String,
+pub struct ContentsMenu {
+    story: Item,
     scroll: usize,
 }
 
-impl<'a> ContentsMenu<'a> {
-    pub fn new(item: Item) -> Self {
-        ContentsMenu {
-            title: "Contents of your story",
-            text: item.description.unwrap_or_default(),
-            scroll: 0,
-        }
+impl ContentsMenu {
+    pub fn new(story: Item) -> Self {
+        ContentsMenu { story, scroll: 0 }
     }
 }
 
-impl<'a> Menu for ContentsMenu<'a> {
+impl Menu for ContentsMenu {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .margin(2)
-            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+            .margin(5)
+            .constraints(vec![Constraint::Percentage(25), Constraint::Percentage(80)])
             .split(f.size());
 
-        let block = Block::default()
-			.title("Help")
-			.borders(Borders::ALL);
-        let spans = Spans::from(vec![
-            Span::styled(
-                "↑ ↓",
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::ITALIC),
-            ),
-            Span::from(", "),
-            Span::styled(
-                "j k",
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::ITALIC),
-            ),
-            Span::from(" to move up or down"),
-        ]);
-        let help = Paragraph::new(spans)
-			.block(block)
-			.wrap(Wrap { trim: true });
-		f.render_widget(help, chunks[0]);
+        // COMMANDS BOX
+        let block = Block::default().title("Commands").borders(Borders::ALL);
+		
+		f.render_widget(block, chunks[0]);
+		
+		let help_chunks = Layout::default()
+			.constraints(vec![Constraint::Percentage(100)])
+			.margin(2)
+			.split(chunks[0]);
 
+        let back_spans = Spans::from(vec![
+            Span::styled("←     ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("go back"),
+        ]);
+
+        let arrows_spans = Spans::from(vec![
+            Span::styled("↑ ↓   ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("navigate UP and DOWN"),
+        ]);
+
+        let quit_spans = Spans::from(vec![
+            Span::styled("ESC   ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("quit"),
+        ]);
+
+        let paragraph = Paragraph::new(vec![back_spans, Spans::from(""), arrows_spans, quit_spans])
+            .wrap(Wrap { trim: true });
+
+        f.render_widget(paragraph, help_chunks[0]);
+        // COMMANDS BOX
+
+        // CONTENTS
         let block = Block::default()
-			.borders(Borders::ALL)
-			.title(self.title);
-        let paragraph = Paragraph::new(self.text.to_string())
-            .block(block)
+            .borders(Borders::ALL)
+            .title(self.story.title.clone().unwrap());
+        f.render_widget(block, chunks[1]);
+
+        let contents_chunks = Layout::default()
+            .constraints(vec![Constraint::Percentage(10), Constraint::Percentage(90)])
+			.margin(2)
+            .split(chunks[1]);
+
+        // META BOX
+        let meta_chunks = Layout::default()
+			.direction(Direction::Horizontal)
+            .constraints(vec![
+                Constraint::Percentage(25),
+                Constraint::Percentage(50),
+                Constraint::Percentage(25),
+            ])
+            .split(contents_chunks[0]);
+
+        let published_spans = Spans::from(vec![
+            Span::styled("Published: ", Style::default().fg(one_dark(Color::Green))),
+            Span::from(self.story.pubDate.clone().unwrap_or_default()),
+        ]);
+
+        let paragraph = Paragraph::new(published_spans)
+            .wrap(Wrap { trim: true });
+
+        f.render_widget(paragraph, meta_chunks[0]);
+
+        let author_spans = Spans::from(vec![
+            Span::styled("Author: ", Style::default().fg(one_dark(Color::Green))),
+            Span::from(self.story.author.clone().unwrap_or_default()),
+        ]);
+
+        let paragraph = Paragraph::new(author_spans)
+            .wrap(Wrap { trim: true });
+
+        f.render_widget(paragraph, meta_chunks[2]);
+        // META BOX
+
+        let paragraph = Paragraph::new(self.story.description.clone().unwrap_or_default())
             .wrap(Wrap { trim: true })
             .scroll((self.scroll as u16, 0));
-		f.render_widget(paragraph, chunks[1]);
+
+        f.render_widget(paragraph, contents_chunks[1]);
+
+        // CONTENTS
     }
 
     fn transition(&mut self, key_event: KeyEvent) -> MenuState {
@@ -78,14 +122,19 @@ impl<'a> Menu for ContentsMenu<'a> {
                 return MenuState::Exit;
             }
 
-            KeyCode::Char('h') => {
-                return MenuState::Stories(None);
+            KeyCode::Up => {
+                if self.scroll > 0 {
+                    self.scroll = self.scroll - 1;
+                }
             }
 
-            KeyCode::Enter => {
-                return MenuState::Stories(None);
+            KeyCode::Down => {
+                self.scroll = self.scroll + 1;
             }
 
+            KeyCode::Left => {
+                return MenuState::Stories(None);
+            }
             _ => {}
         }
 
