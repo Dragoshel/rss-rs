@@ -4,25 +4,36 @@ use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Frame;
 
-use crossterm::event::{KeyCode, KeyEvent};
-use tui::style::{Color, Modifier, Style};
+use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 
-use crate::models::Item;
-use crate::util::one_dark;
+use crossterm::event::{KeyCode, KeyEvent};
 
-use super::{Menu, MenuState};
+use rss::Item;
 
-#[derive(Default)]
+use super::{Menu, MenuState, one_dark};
+
 pub struct ContentsMenu {
     story: Item,
+
     scroll: usize,
 }
 
 impl ContentsMenu {
-    pub fn new(story: Item) -> Self {
-        ContentsMenu { story, scroll: 0 }
+    pub fn new() -> Self {
+        ContentsMenu {
+            story: Item::default(),
+            scroll: 0,
+        }
+    }
+
+    pub fn get_story(&self) -> &Item {
+        &self.story
+    }
+
+    pub fn set_story(&mut self, story: Item) {
+        self.story = story;
     }
 }
 
@@ -36,13 +47,13 @@ impl Menu for ContentsMenu {
 
         // COMMANDS BOX
         let block = Block::default().title("Commands").borders(Borders::ALL);
-		
-		f.render_widget(block, chunks[0]);
-		
-		let help_chunks = Layout::default()
-			.constraints(vec![Constraint::Percentage(100)])
-			.margin(2)
-			.split(chunks[0]);
+
+        f.render_widget(block, chunks[0]);
+
+        let help_chunks = Layout::default()
+            .constraints(vec![Constraint::Percentage(100)])
+            .margin(2)
+            .split(chunks[0]);
 
         let back_spans = Spans::from(vec![
             Span::styled("←     ", Style::default().fg(one_dark(Color::Green))),
@@ -68,17 +79,17 @@ impl Menu for ContentsMenu {
         // CONTENTS
         let block = Block::default()
             .borders(Borders::ALL)
-            .title(self.story.title.clone().unwrap());
+            .title(self.story.title().unwrap());
         f.render_widget(block, chunks[1]);
 
         let contents_chunks = Layout::default()
             .constraints(vec![Constraint::Percentage(10), Constraint::Percentage(90)])
-			.margin(2)
+            .margin(2)
             .split(chunks[1]);
 
         // META BOX
         let meta_chunks = Layout::default()
-			.direction(Direction::Horizontal)
+            .direction(Direction::Horizontal)
             .constraints(vec![
                 Constraint::Percentage(25),
                 Constraint::Percentage(50),
@@ -88,26 +99,24 @@ impl Menu for ContentsMenu {
 
         let published_spans = Spans::from(vec![
             Span::styled("Published: ", Style::default().fg(one_dark(Color::Green))),
-            Span::from(self.story.pubDate.clone().unwrap_or_default()),
+            Span::from(self.story.pub_date().unwrap_or_default()),
         ]);
 
-        let paragraph = Paragraph::new(published_spans)
-            .wrap(Wrap { trim: true });
+        let paragraph = Paragraph::new(published_spans).wrap(Wrap { trim: true });
 
         f.render_widget(paragraph, meta_chunks[0]);
 
         let author_spans = Spans::from(vec![
             Span::styled("Author: ", Style::default().fg(one_dark(Color::Green))),
-            Span::from(self.story.author.clone().unwrap_or_default()),
+            Span::from(self.story.author().unwrap_or_default()),
         ]);
 
-        let paragraph = Paragraph::new(author_spans)
-            .wrap(Wrap { trim: true });
+        let paragraph = Paragraph::new(author_spans).wrap(Wrap { trim: true });
 
         f.render_widget(paragraph, meta_chunks[2]);
         // META BOX
 
-        let paragraph = Paragraph::new(self.story.description.clone().unwrap_or_default())
+        let paragraph = Paragraph::new(self.story.content().unwrap_or_default())
             .wrap(Wrap { trim: true })
             .scroll((self.scroll as u16, 0));
 
@@ -139,6 +148,10 @@ impl Menu for ContentsMenu {
         }
 
         MenuState::Contents(None)
+    }
+
+    fn refresh(&mut self) -> crate::Result<()> {
+        todo!()
     }
 
     fn state(&mut self) -> MenuState {

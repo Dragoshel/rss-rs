@@ -2,32 +2,44 @@ use std::io::Stdout;
 
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Modifier, Style};
+use tui::style::{Color, Style};
 use tui::terminal::Frame;
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
-use super::{Menu, MenuState};
+use mongodb::sync::Database;
 
-use crate::models::Item;
-use crate::util::one_dark;
+use rss::Item;
 
-#[derive(Default)]
+use super::{Menu, MenuState, one_dark};
+
 pub struct StoriesMenu<'a> {
     title: &'a str,
     stories: Vec<Item>,
     state: ListState,
+
+    database: &'a Database,
 }
 
 impl<'a> StoriesMenu<'a> {
-    pub fn new(stories: Vec<Item>) -> Self {
+    pub fn new(title: &'a str, database: &'a Database) -> Self {
         StoriesMenu {
-            title: "Latest Stories",
-            stories,
+            title,
+            stories: Vec::new(),
             state: ListState::default(),
+
+            database,
         }
+    }
+
+    pub fn stories(&self) -> &[Item] {
+        &self.stories
+    }
+
+    pub fn set_stories(&mut self, stories: impl Into<Vec<Item>>) {
+		self.stories = stories.into();
     }
 
     fn next(&mut self) {
@@ -122,12 +134,12 @@ impl<'a> Menu for StoriesMenu<'a> {
         let items: Vec<ListItem> = self
             .stories
             .iter()
-            .map(|s| ListItem::new(s.title.clone().unwrap_or_default()))
+            .map(|s| ListItem::new(s.title().unwrap_or_default()))
             .collect();
 
         let list = List::new(items)
             .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_style(Style::default().fg(one_dark(Color::LightBlue)))
             .highlight_symbol("> ");
         // STORIES LIST
 
@@ -165,6 +177,10 @@ impl<'a> Menu for StoriesMenu<'a> {
         }
 
         MenuState::Stories(None)
+    }
+
+    fn refresh(&mut self) -> crate::Result<()> {
+        todo!()
     }
 
     fn state(&mut self) -> MenuState {

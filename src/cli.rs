@@ -1,7 +1,7 @@
 use clap::Parser;
+use mongodb::sync::Client;
 
 use crate::app::App;
-use crate::mongo::run as mongo_run;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -12,14 +12,9 @@ struct Cli {
 
 pub fn run() {
 	let cli = Cli::parse();
-    let mut app = App::new();
 
-	if cli.mongo {
-		mongo_run();
-		return;
-	}
-
-
-	app.init().unwrap();
+	let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
+	let database = client.database("Rss-Rs");
+    let mut app = App::new(&database).unwrap();
     app.run().unwrap();
 }

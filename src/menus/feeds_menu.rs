@@ -1,61 +1,54 @@
-use std::io::Stdout;
-use std::ops::Deref;
-
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Modifier, Style};
+use tui::style::{Color, Style};
 use tui::terminal::Frame;
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Wrap};
+use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
-use crate::models::Channel;
-use crate::mongo::{delete_feed, get_all_feeds, insert_feed};
-use crate::util::{centered_rect, one_dark};
+use mongodb::sync::Database;
 
-use super::{Menu, MenuState};
+use std::io::Stdout;
 
-#[derive(Clone, Copy, Default)]
-enum PopupChoice {
-    #[default]
-    Back,
-    Subscribe,
-}
+use rss::Channel;
 
-#[derive(Default)]
+use crate::mongo::{delete_feed, get_feeds, get_stories};
+
+use super::{FeedsPopupMenu, Menu, MenuState, one_dark};
+
 pub struct FeedsMenu<'a> {
     title: &'a str,
     feeds: Vec<Channel>,
     state: ListState,
 
-    popup_title: &'a str,
-    popup_feed: Option<Channel>,
-    popup_fetched: bool,
-    popup_input: String,
-    popup_choice: PopupChoice,
-    popped: bool,
+    popup_menu: FeedsPopupMenu<'a>,
+
+    database: &'a Database,
 }
 
 impl<'a> FeedsMenu<'a> {
-    pub fn new(title: &'a str) -> Self {
-        FeedsMenu {
+    pub fn new(title: &'a str, database: &'a Database) -> crate::Result<Self> {
+        let popup_menu = FeedsPopupMenu::new("Search for a feed online", database);
+        let feeds = get_feeds(database)?;
+
+        Ok(FeedsMenu {
             title,
-            feeds: vec![],
+            feeds,
             state: ListState::default(),
 
-            popup_title: "Search for a Feed",
-            popup_feed: None,
-            popup_fetched: false,
-            popup_input: String::new(),
-            popup_choice: PopupChoice::Back,
-            popped: false,
-        }
+            popup_menu,
+
+            database,
+        })
     }
 
-    pub fn init(&mut self) -> crate::Result<()> {
-        self.feeds = get_all_feeds()?;
-        Ok(())
+    fn feeds(&self) -> &[Channel] {
+        &self.feeds
+    }
+
+    fn set_feeds(&mut self, feeds: impl Into<Vec<Channel>>) {
+        self.feeds = feeds.into();
     }
 
     fn next(&mut self) {
@@ -94,72 +87,6 @@ impl<'a> FeedsMenu<'a> {
             None => 0,
         };
         self.state.select(Some(i));
-    }
-
-    fn exit_popup(&mut self) {
-        self.popped = false;
-        self.popup_fetched = false;
-        self.popup_input = String::new();
-    }
-
-    fn handle_popup_events(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Esc => {
-                self.exit_popup();
-            }
-
-            KeyCode::Char(c) => {
-                self.popup_input.push(c);
-                self.popup_fetched = false;
-            }
-
-            KeyCode::Backspace => {
-                self.popup_input.pop();
-                self.popup_fetched = false;
-            }
-
-            KeyCode::Left => {
-                self.popup_choice = PopupChoice::Back;
-            }
-
-            KeyCode::Right => {
-                self.popup_choice = PopupChoice::Subscribe;
-            }
-
-            KeyCode::Enter => {
-                if self.popup_fetched {
-                    // SUBSCRIBING TO URL
-                    match self.popup_choice {
-                        PopupChoice::Back => {}
-                        PopupChoice::Subscribe => {
-                            if let Some(channel) = &self.popup_feed {
-                                insert_feed(channel).unwrap();
-                            }
-                            self.init().unwrap();
-                        }
-                    }
-                    self.exit_popup();
-                } else {
-                    // FETCHING FEED BY URL
-                    match Channel::fetch_required(&self.popup_input) {
-                        Ok(mut channel) => {
-                            channel.rss_link = Some(self.popup_input.to_string());
-                            self.popup_feed = Some(channel);
-                        }
-                        Err(error) => {
-                            // [TODO]
-                            // CHANGE TO PROPER ERROR REPORTING
-                            let mut error_channel = Channel::default();
-                            error_channel.title = error.to_string();
-                            self.popup_feed = Some(error_channel);
-                        }
-                    }
-                    self.popup_fetched = true;
-                }
-            }
-
-            _ => {}
-        }
     }
 }
 
@@ -232,93 +159,28 @@ impl<'a> Menu for FeedsMenu<'a> {
         let channels: Vec<ListItem> = self
             .feeds
             .iter()
-            .map(|c| ListItem::new(c.title.to_string()))
+            .map(|c| ListItem::new(c.title()))
             .collect();
 
         let list = List::new(channels)
             .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_style(Style::default().fg(one_dark(Color::LightBlue)))
             .highlight_symbol("> ");
 
         f.render_stateful_widget(list, feeds_chunks[0], &mut self.state);
         // FEEDS LIST
 
         // POPUP
-        if self.popped {
-            let popup_area = centered_rect(40, 30, f.size());
-
-            let chunks = Layout::default()
-                .constraints(vec![Constraint::Percentage(35), Constraint::Percentage(65)])
-                .split(popup_area);
-
-            let mut input_container = Block::default()
-                .title(self.popup_title)
-                .borders(Borders::ALL)
-                .style(Style::default().bg(Color::Blue));
-
-            let input_chunks = Layout::default()
-                .constraints(vec![Constraint::Percentage(100)])
-                .margin(1)
-				.horizontal_margin(3)
-                .split(chunks[0]);
-
-            let input_block = Block::default().borders(Borders::ALL);
-
-            let input = Paragraph::new(self.popup_input.to_string())
-                .wrap(Wrap { trim: true })
-                .block(input_block);
-
-            f.render_widget(input, input_chunks[0]);
-
-            if self.popup_fetched {
-                input_container =
-                    input_container.borders(Borders::TOP | Borders::RIGHT | Borders::LEFT);
-
-                let channel_container = Block::default()
-                    .borders(Borders::BOTTOM | Borders::RIGHT | Borders::LEFT)
-                    .style(Style::default().bg(Color::Blue));
-
-                f.render_widget(channel_container, chunks[1]);
-
-                let channel_chunks = Layout::default()
-                    .constraints(vec![
-                        Constraint::Percentage(20),
-                        Constraint::Percentage(60),
-                        Constraint::Percentage(20),
-                    ])
-                    .margin(1)
-					.horizontal_margin(3)
-                    .split(chunks[1]);
-
-                if let Some(channel) = &self.popup_feed {
-                    let title = Paragraph::new(channel.title.to_string()).wrap(Wrap { trim: true });
-                    f.render_widget(title, channel_chunks[0]);
-
-                    let description =
-                        Paragraph::new(channel.description.to_string()).wrap(Wrap { trim: true });
-                    f.render_widget(description, channel_chunks[1]);
-                }
-
-                let tabs = Tabs::new(vec![Spans::from("Back"), Spans::from("Subscribe")])
-                    .select(self.popup_choice as usize)
-                    .style(Style::default().fg(Color::Yellow))
-                    .highlight_style(
-                        Style::default()
-                            .add_modifier(Modifier::BOLD)
-                            .bg(one_dark(Color::Black)),
-                    );
-                f.render_widget(tabs, channel_chunks[2]);
-            }
-            f.render_widget(input_container, chunks[0]);
+        if self.popup_menu.popped {
+            self.popup_menu.draw(f);
         }
         // POPUP
     }
 
     fn transition(&mut self, key_event: KeyEvent) -> MenuState {
-        if self.popped {
-            self.handle_popup_events(key_event);
+        if self.popup_menu.popped {
+            self.popup_menu.transition(key_event);
         } else {
-            // FEEDS MENU
             match key_event.code {
                 KeyCode::Esc => {
                     return MenuState::Exit;
@@ -333,7 +195,7 @@ impl<'a> Menu for FeedsMenu<'a> {
                 }
 
                 KeyCode::Char('s') => {
-                    self.popped = true;
+                    self.popup_menu.popped = true;
                 }
 
                 KeyCode::Char('d') => {
@@ -341,10 +203,10 @@ impl<'a> Menu for FeedsMenu<'a> {
                         let selected_feed = self.feeds.get(selected_state);
 
                         if let Some(selected) = selected_feed {
-                            delete_feed(selected.title.deref()).unwrap();
+                            delete_feed(selected.title(), self.database).unwrap();
                         }
                     }
-                    self.init().unwrap();
+                    self.refresh().unwrap();
                 }
 
                 KeyCode::Enter => {
@@ -352,17 +214,23 @@ impl<'a> Menu for FeedsMenu<'a> {
                         let selected_feed = self.feeds.get(selected_state);
 
                         if let Some(selected) = selected_feed {
-                            return MenuState::Stories(Some(selected.clone()));
+							let stories = get_stories(selected.title(), self.database).unwrap();
+                            return MenuState::Stories(stories);
                         }
                     }
                 }
 
                 _ => {}
             }
-            // FEEDS MENU
         }
 
         MenuState::Feeds
+    }
+
+    fn refresh(&mut self) -> crate::Result<()> {
+        self.feeds = get_feeds(self.database)?;
+
+        Ok(())
     }
 
     fn state(&mut self) -> MenuState {

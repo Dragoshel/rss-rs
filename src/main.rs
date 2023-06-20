@@ -1,12 +1,12 @@
 mod cli;
-mod models;
 mod util;
 mod app;
 mod menus;
 mod mongo;
+mod error;
 
-pub use self::util::Error;
-pub use self::util::Result;
+pub use self::error::Error;
+pub use self::error::Result;
 
 use cli::run;
 

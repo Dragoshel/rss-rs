@@ -19,4 +19,4 @@ thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
 tui = "0.19.0"
 url = "2.3.1"
-xml-rs = "0.8.13"
+rss = { version = "2.0.4", features = ["serde", "validation"] }

@@ -1,105 +1,14 @@
-use std::fs::File;
-use std::io::{BufReader, Cursor};
+use std::io::{Cursor, BufReader};
 
-use tui::layout::{Layout, Direction, Constraint, Rect};
-use tui::style::Color;
+use rss::Channel;
 
-use xml::{reader::XmlEvent, EventReader};
-
-use thiserror::Error;
-
-pub fn one_dark(color: Color) -> Color {
-	match color {
-		Color::Black => Color::Rgb(40, 44, 52),
-		Color::Red => Color::Rgb(224, 108, 117),
-		Color::Green => Color::Rgb(152, 195, 121),
-		Color::Yellow => Color::Rgb(229, 192, 123),
-		Color::Blue => Color::Rgb(97, 175, 239),
-		Color::Magenta => Color::Rgb(198, 120, 221),
-		Color::LightBlue => Color::Rgb(86, 182, 194),
-		Color::White => Color::Rgb(171, 178, 191),
-		_ => color
-	}
-}
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("ERROR: could not fetch data")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[error("ERROR: could not parse xml document")]
-    XmlReader(#[from] xml::reader::Error),
-
-	#[error("ERROR: could not interact with Mongo Db")]
-	MongoDb(#[from] mongodb::error::Error)
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-pub fn read_text(
-    reader: &mut EventReader<BufReader<Cursor<String>>>,
-) -> xml::reader::Result<Option<String>> {
-    loop {
-        match reader.next() {
-            Ok(XmlEvent::CData(text)) => return Ok(Some(text)),
-            Ok(XmlEvent::Characters(text)) => return Ok(Some(text)),
-            Ok(XmlEvent::Whitespace(_)) => {}
-            Err(error) => return Err(error),
-            _ => return Ok(None),
-        }
-    }
-}
-
-pub fn skip_to(
-    reader: &mut EventReader<BufReader<Cursor<String>>>,
-    tag_name: &str,
-) -> xml::reader::Result<Option<()>> {
-    loop {
-        match reader.next()? {
-            XmlEvent::StartElement { name, .. } => {
-                if name.local_name == tag_name {
-                    return Ok(Some(()));
-                }
-            }
-            XmlEvent::EndDocument => return Ok(None),
-            _ => {}
-        }
-    }
-}
-
-pub fn fetch_file(url: &str) -> xml::reader::Result<File> {
-    let file = File::open(url)?;
-    Ok(file)
-}
-
-pub fn fetch_http(url: &str) -> reqwest::Result<Cursor<String>> {
+pub fn fetch_http(url: &str) -> reqwest::Result<BufReader<Cursor<String>>> {
     let body = reqwest::blocking::get(url)?.text()?;
-    Ok(Cursor::new(body))
+    Ok(BufReader::new(Cursor::new(body)))
 }
 
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_y) / 2),
-                Constraint::Percentage(percent_y),
-                Constraint::Percentage((100 - percent_y) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_x) / 2),
-                Constraint::Percentage(percent_x),
-                Constraint::Percentage((100 - percent_x) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(popup_layout[1])[1]
+pub fn fetch_feed(url: &str) -> crate::Result<Channel> {
+	let reader = fetch_http(url)?;
+	let channel = Channel::read_from(reader)?;
+	Ok(channel)
 }
