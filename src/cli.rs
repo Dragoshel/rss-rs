@@ -32,7 +32,7 @@ enum Commands {
 }
 
 pub fn handle() -> crate::Result<()> {
-    let cli = Cli::parse();;
+    let cli = Cli::parse();
 
     match &cli.command {
         Some(Commands::Read { feed, story, story_all, url, verbose }) => {
