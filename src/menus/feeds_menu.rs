@@ -13,7 +13,7 @@ use std::io::Stdout;
 
 use rss::Channel;
 
-use crate::mongo::{delete_feed, get_feeds, get_stories};
+use crate::{delete_feed, get_feeds, get_stories};
 
 use super::{FeedsPopupMenu, Menu, MenuState, one_dark};
 
@@ -29,15 +29,12 @@ pub struct FeedsMenu<'a> {
 
 impl<'a> FeedsMenu<'a> {
     pub fn new(title: &'a str, database: &'a Database) -> crate::Result<Self> {
-        let popup_menu = FeedsPopupMenu::new("Search for a feed online", database);
-        let feeds = get_feeds(database)?;
-
         Ok(FeedsMenu {
             title,
-            feeds,
+            feeds: get_feeds(database)?,
             state: ListState::default(),
 
-            popup_menu,
+            popup_menu: FeedsPopupMenu::new("Search for a Feed Online", database),
 
             database,
         })

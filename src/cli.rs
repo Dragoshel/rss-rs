@@ -1,20 +1,62 @@
-use clap::Parser;
 use mongodb::sync::Client;
 
-use crate::app::App;
+use clap::{Parser, Subcommand};
 
-#[derive(Parser, Debug)]
+use crate::util::fetch_feed;
+
+#[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-	#[arg(long)]
-	mongo: bool,
+    #[command(subcommand)]
+    command: Option<Commands>,
 }
 
-pub fn run() {
-	let cli = Cli::parse();
+#[derive(Subcommand)]
+enum Commands {
+    Read {
+        #[arg(short, long)]
+        feed: bool,
 
-	let client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
-	let database = client.database("Rss-Rs");
-    let mut app = App::new(&database).unwrap();
-    app.run().unwrap();
+        #[arg(short, long)]
+        story: Option<usize>,
+
+        #[arg(long)]
+        story_all: bool,
+
+        #[arg(short, long)]
+        url: String,
+
+	    #[arg(short, long, action = clap::ArgAction::Count)]
+	    verbose: u8,
+    },
+}
+
+pub fn handle() -> crate::Result<()> {
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Some(Commands::Read { feed, story, story_all, url, verbose }) => {
+			let fetched_feed = fetch_feed(url)?;	
+
+			if *feed == true {
+				println!("{fetched_feed:?}");
+			} else if *story_all == true {
+				let stories = fetched_feed.items();
+				println!("{stories:?}");
+			} else {
+				let story = story.unwrap_or_default();
+				let story = fetched_feed.items().get(story).unwrap();
+				println!("{story:?}");
+			}
+	
+			Ok(())
+        }
+        None => {
+            let client = Client::with_uri_str("mongodb://localhost:27017")?;
+            let database = client.database("main");
+            let mut app = crate::App::new(&database)?;
+
+            app.run()
+        }
+    }
 }

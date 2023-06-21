@@ -14,7 +14,7 @@ use crossterm::terminal::{
 
 use mongodb::sync::Database;
 
-use crate::menus::{one_dark, ContentsMenu, FeedsMenu, Menu, MenuState, StoriesMenu};
+use crate::{one_dark, ContentsMenu, FeedsMenu, Menu, MenuState, StoriesMenu};
 
 pub struct App<'a> {
     pub feeds_menu: FeedsMenu<'a>,
@@ -48,7 +48,7 @@ impl<'a> App<'a> {
             })
             .unwrap();
 
-        if poll(Duration::from_millis(500)).unwrap() {
+        if poll(Duration::from_millis(100)).unwrap() {
             if let Ok(Event::Key(key_event)) = read() {
                 return menu.transition(key_event);
             }

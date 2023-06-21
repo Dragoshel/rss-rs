@@ -1,15 +1,16 @@
-mod cli;
-mod util;
 mod app;
+mod error;
 mod menus;
 mod mongo;
-mod error;
+mod util;
+mod cli;
 
-pub use self::error::Error;
-pub use self::error::Result;
-
-use cli::run;
+use error::{Error, Result};
+use menus::*;
+use util::*;
+use mongo::*;
+use app::App;
 
 fn main() {
-	run();
+	self::cli::handle().unwrap();
 }
