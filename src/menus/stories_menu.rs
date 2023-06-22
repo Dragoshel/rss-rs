@@ -11,34 +11,34 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 use mongodb::sync::Database;
 
-use rss::Item;
+use crate::models::Story;
 
 use super::{Menu, MenuState, one_dark};
 
 pub struct StoriesMenu<'a> {
     title: &'a str,
-    stories: Vec<Item>,
+    stories: Vec<Story>,
     state: ListState,
 
-    database: &'a Database,
+    db: &'a Database,
 }
 
 impl<'a> StoriesMenu<'a> {
-    pub fn new(title: &'a str, database: &'a Database) -> Self {
+    pub fn new(title: &'a str, db: &'a Database) -> Self {
         StoriesMenu {
             title,
             stories: Vec::new(),
             state: ListState::default(),
 
-            database,
+            db,
         }
     }
 
-    pub fn stories(&self) -> &[Item] {
+    pub fn stories(&self) -> &[Story] {
         &self.stories
     }
 
-    pub fn set_stories(&mut self, stories: impl Into<Vec<Item>>) {
+    pub fn set_stories(&mut self, stories: impl Into<Vec<Story>>) {
 		self.stories = stories.into();
     }
 
@@ -169,7 +169,8 @@ impl<'a> Menu for StoriesMenu<'a> {
                     let selected_story = self.stories.get(selected_state);
 
                     if let Some(selected) = selected_story {
-                        return MenuState::Contents(Some(selected.clone()));
+						let story = selected.clone();
+                        return MenuState::Contents(Some(story));
                     }
                 }
             }

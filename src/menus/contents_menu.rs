@@ -10,12 +10,12 @@ use tui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
-use rss::Item;
+use crate::models::Story;
 
-use super::{Menu, MenuState, one_dark};
+use super::{one_dark, Menu, MenuState};
 
 pub struct ContentsMenu {
-    story: Item,
+    story: Story,
 
     scroll: usize,
 }
@@ -23,16 +23,16 @@ pub struct ContentsMenu {
 impl ContentsMenu {
     pub fn new() -> Self {
         ContentsMenu {
-            story: Item::default(),
+            story: Story::default(),
             scroll: 0,
         }
     }
 
-    pub fn get_story(&self) -> &Item {
+    pub fn get_story(&self) -> &Story {
         &self.story
     }
 
-    pub fn set_story(&mut self, story: Item) {
+    pub fn set_story(&mut self, story: Story) {
         self.story = story;
     }
 }

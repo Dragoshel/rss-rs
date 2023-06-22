@@ -1,3 +1,4 @@
+use mongodb::bson::doc;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
@@ -11,40 +12,40 @@ use mongodb::sync::Database;
 
 use std::io::Stdout;
 
-use rss::Channel;
+use crate::models::{delete_one_feed, find_many_feed, Feed};
 
-use crate::{delete_feed, get_feeds, get_stories};
-
-use super::{FeedsPopupMenu, Menu, MenuState, one_dark};
+use super::{one_dark, FeedsPopupMenu, Menu, MenuState};
 
 pub struct FeedsMenu<'a> {
     title: &'a str,
-    feeds: Vec<Channel>,
+    feeds: Vec<Feed>,
     state: ListState,
 
     popup_menu: FeedsPopupMenu<'a>,
 
-    database: &'a Database,
+    db: &'a Database,
 }
 
 impl<'a> FeedsMenu<'a> {
-    pub fn new(title: &'a str, database: &'a Database) -> crate::Result<Self> {
-        Ok(FeedsMenu {
+    pub fn new(title: &'a str, db: &'a Database) -> crate::Result<Self> {
+        let feeds = find_many_feed(None, db)?;
+        let menu = Self {
             title,
-            feeds: get_feeds(database)?,
+            feeds,
             state: ListState::default(),
 
-            popup_menu: FeedsPopupMenu::new("Search for a Feed Online", database),
+            popup_menu: FeedsPopupMenu::new("Search for a Feed Online", db),
 
-            database,
-        })
+            db,
+        };
+        Ok(menu)
     }
 
-    fn feeds(&self) -> &[Channel] {
+    fn feeds(&self) -> &[Feed] {
         &self.feeds
     }
 
-    fn set_feeds(&mut self, feeds: impl Into<Vec<Channel>>) {
+    fn set_feeds(&mut self, feeds: impl Into<Vec<Feed>>) {
         self.feeds = feeds.into();
     }
 
@@ -200,7 +201,7 @@ impl<'a> Menu for FeedsMenu<'a> {
                         let selected_feed = self.feeds.get(selected_state);
 
                         if let Some(selected) = selected_feed {
-                            delete_feed(selected.title(), self.database).unwrap();
+                            delete_one_feed(doc! {"title": selected.title()}, self.db).unwrap();
                         }
                     }
                     self.refresh().unwrap();
@@ -211,8 +212,8 @@ impl<'a> Menu for FeedsMenu<'a> {
                         let selected_feed = self.feeds.get(selected_state);
 
                         if let Some(selected) = selected_feed {
-							let stories = get_stories(selected.title(), self.database).unwrap();
-                            return MenuState::Stories(stories);
+							let stories = selected.stories().to_vec();
+                            return MenuState::Stories(Some(stories));
                         }
                     }
                 }
@@ -225,8 +226,7 @@ impl<'a> Menu for FeedsMenu<'a> {
     }
 
     fn refresh(&mut self) -> crate::Result<()> {
-        self.feeds = get_feeds(self.database)?;
-
+        self.feeds = find_many_feed(None, self.db)?;
         Ok(())
     }
 

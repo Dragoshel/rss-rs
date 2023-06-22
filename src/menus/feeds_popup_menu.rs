@@ -13,15 +13,13 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 use mongodb::sync::Database;
 
-use rss::Channel;
-
-use crate::{mongo, util::fetch_feed};
+use crate::{util::fetch_feed, models::{Feed, insert_one_feed}};
 
 use super::{Menu, MenuState, centered_rect, one_dark};
 
 pub struct FeedsPopupMenu<'a> {
     title: &'a str,
-    feed: Option<Channel>,
+    feed: Option<Feed>,
 
     pub popped: bool,
     fetched: bool,
@@ -29,11 +27,11 @@ pub struct FeedsPopupMenu<'a> {
     choice: usize,
     input: String,
 
-    database: &'a Database,
+    db: &'a Database,
 }
 
 impl<'a> FeedsPopupMenu<'a> {
-    pub fn new(title: &'a str, database: &'a Database) -> Self {
+    pub fn new(title: &'a str, db: &'a Database) -> Self {
         FeedsPopupMenu {
             title,
             popped: false,
@@ -42,15 +40,15 @@ impl<'a> FeedsPopupMenu<'a> {
             choice: 0,
             input: String::new(),
 
-            database,
+            db,
         }
     }
 
-    pub fn feed(&self) -> Option<&Channel> {
+    pub fn feed(&self) -> Option<&Feed> {
         self.feed.as_ref()
     }
 
-    pub fn set_feed(&mut self, feed: impl Into<Option<Channel>>) {
+    pub fn set_feed(&mut self, feed: impl Into<Option<Feed>>) {
         self.feed = feed.into();
     }
 
@@ -160,8 +158,8 @@ impl<'a> Menu for FeedsPopupMenu<'a> {
                     // SUBSCRIBING TO URL
                     match self.choice {
                         1 => {
-                            if let Some(channel) = self.feed() {
-                                mongo::insert_feed(channel, self.database).unwrap();
+                            if let Some(feed) = self.feed() {
+								insert_one_feed(feed, self.db).unwrap();
                             }
                         }
                         _ => {}
@@ -171,8 +169,8 @@ impl<'a> Menu for FeedsPopupMenu<'a> {
                 } else {
                     // FETCHING FEED BY URL
                     match fetch_feed(&self.input) {
-                        Ok(channel) => {
-                            self.feed = Some(channel);
+                        Ok(feed) => {
+                            self.feed = Some(feed);
                         }
                         Err(error) => {
 							self.feed = None;

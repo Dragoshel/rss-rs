@@ -41,11 +41,11 @@ pub fn handle() -> crate::Result<()> {
 			if *feed == true {
 				println!("{fetched_feed:?}");
 			} else if *story_all == true {
-				let stories = fetched_feed.items();
+				let stories = fetched_feed.stories();
 				println!("{stories:?}");
 			} else {
 				let story = story.unwrap_or_default();
-				let story = fetched_feed.items().get(story).unwrap();
+				let story = fetched_feed.stories().get(story).unwrap();
 				println!("{story:?}");
 			}
 	

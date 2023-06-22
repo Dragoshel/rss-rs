@@ -25,10 +25,10 @@ pub struct App<'a> {
 }
 
 impl<'a> App<'a> {
-    pub fn new(database: &'a Database) -> crate::Result<Self> {
+    pub fn new(db: &'a Database) -> crate::Result<Self> {
         let app = App {
-            feeds_menu: FeedsMenu::new("Your Feeds", database)?,
-            stories_menu: StoriesMenu::new("Your Stories", database),
+            feeds_menu: FeedsMenu::new("Your Feeds", db)?,
+            stories_menu: StoriesMenu::new("Your Stories", db),
             contents_menu: ContentsMenu::new(),
 
             current_menu: MenuState::Feeds,

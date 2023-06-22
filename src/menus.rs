@@ -3,10 +3,10 @@ mod feeds_menu;
 mod stories_menu;
 mod feeds_popup_menu;
 
-pub use self::contents_menu::ContentsMenu;
-pub use self::feeds_menu::FeedsMenu;
-pub use self::stories_menu::StoriesMenu;
-pub use self::feeds_popup_menu::FeedsPopupMenu;
+pub use contents_menu::ContentsMenu;
+pub use feeds_menu::FeedsMenu;
+pub use stories_menu::StoriesMenu;
+pub use feeds_popup_menu::FeedsPopupMenu;
 
 use std::io::Stdout;
 
@@ -16,12 +16,12 @@ use tui::Frame;
 
 use crossterm::event::KeyEvent;
 
-use rss::Item;
+use crate::models::Story;
 
 pub enum MenuState {
 	Feeds,
-	Stories(Option<Vec<Item>>),
-	Contents(Option<Item>),
+	Stories(Option<Vec<Story>>),
+	Contents(Option<Story>),
 	Exit,
 }
 
