@@ -4,10 +4,11 @@ use mongodb::bson::oid::ObjectId;
 
 use super::Story;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize)]
+#[derive(Debug, Default, Clone)]
 pub struct Feed {
     #[serde(rename = "_id")]
-    id: ObjectId,
+    pub id: ObjectId,
     title: String,
     link: String,
     description: String,
@@ -33,10 +34,6 @@ impl From<rss::Channel> for Feed {
 }
 
 impl Feed {
-	pub fn id(&self) -> String {
-		self.id.to_string()
-	}
-
     pub fn title(&self) -> &str {
         self.title.as_str()
     }

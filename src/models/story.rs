@@ -1,3 +1,6 @@
+use std::io::{BufReader, Cursor};
+
+use html2text::render::text_renderer::PlainDecorator;
 use serde::{Deserialize, Serialize};
 
 use mongodb::bson::oid::ObjectId;
@@ -5,13 +8,14 @@ use mongodb::bson::oid::ObjectId;
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct Story {
     #[serde(rename = "_id")]
-    id: ObjectId,
+    pub id: ObjectId,
     title: Option<String>,
     link: Option<String>,
     description: Option<String>,
     #[serde(rename = "pubDate")]
     pub_date: Option<String>,
     author: Option<String>,
+    creator: Option<String>,
     content: Option<String>,
     pub read: bool,
     pub scroll: usize,
@@ -19,17 +23,29 @@ pub struct Story {
 
 impl From<rss::Item> for Story {
     fn from(item: rss::Item) -> Self {
-        Self {
+        let creator = if let Some(dc_ext) = item.dublin_core_ext() {
+            dc_ext.creators.first().cloned()
+        } else {
+            None
+        };
+
+		let html = BufReader::new(Cursor::new(item.content().unwrap_or_default()));
+		let html = html2text::parse(html);
+		let html = html.render(200, PlainDecorator::new()).into_string();
+
+        let story = Self {
             id: ObjectId::new(),
             title: item.title,
             link: item.link,
             description: item.description,
             pub_date: item.pub_date,
             author: item.author,
-            content: item.content,
+            creator,
+            content: Some(html),
             read: false,
             scroll: 0,
-        }
+        };
+        story
     }
 }
 
@@ -38,10 +54,7 @@ impl Story {
         self.title.as_deref()
     }
 
-    pub fn set_title<V>(&mut self, title: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_title(&mut self, title: impl Into<Option<String>>) {
         self.title = title.into();
     }
 
@@ -49,10 +62,7 @@ impl Story {
         self.link.as_deref()
     }
 
-    pub fn set_link<V>(&mut self, link: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_link(&mut self, link: impl Into<Option<String>>) {
         self.link = link.into();
     }
 
@@ -60,10 +70,7 @@ impl Story {
         self.description.as_deref()
     }
 
-    pub fn set_description<V>(&mut self, description: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_description(&mut self, description: impl Into<Option<String>>) {
         self.description = description.into();
     }
 
@@ -71,10 +78,7 @@ impl Story {
         self.pub_date.as_deref()
     }
 
-    pub fn set_pub_date<V>(&mut self, pub_date: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_pub_date(&mut self, pub_date: impl Into<Option<String>>) {
         self.pub_date = pub_date.into();
     }
 
@@ -82,21 +86,23 @@ impl Story {
         self.author.as_deref()
     }
 
-    pub fn set_author<V>(&mut self, author: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_author(&mut self, author: impl Into<Option<String>>) {
         self.author = author.into();
+    }
+
+    pub fn creator(&self) -> Option<&str> {
+        self.creator.as_deref()
+    }
+
+    pub fn set_creator(&mut self, creator: impl Into<Option<String>>) {
+        self.creator = creator.into();
     }
 
     pub fn content(&self) -> Option<&str> {
         self.content.as_deref()
     }
 
-    pub fn set_content<V>(&mut self, content: V)
-    where
-        V: Into<Option<String>>,
-    {
+    pub fn set_content(&mut self, content: impl Into<Option<String>>) {
         self.content = content.into();
     }
 }

@@ -5,12 +5,18 @@ mod util;
 mod cli;
 mod models;
 
-use error::{Error, Result};
-use menus::*;
-use mongodb::sync::Client;
-use util::*;
-use app::App;
+pub use app::App;
+pub use cli::{Cli, Commands};
+
+use clap::Parser;
 
 fn main() {
-	self::cli::handle().unwrap();
+	let cli = Cli::parse();
+
+	if cli.seed_database {
+		cli.seed_database().expect("Encountered error while seeding the database");
+		println!("Succesfully Seeded");
+	} else {
+	    cli.handle_args().unwrap();
+	}
 }

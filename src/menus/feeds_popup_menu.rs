@@ -1,11 +1,9 @@
-use tui::{
-    backend::CrosstermBackend,
-    layout::{Constraint, Layout},
-    style::{Color, Modifier, Style},
-    text::Spans,
-    widgets::{Block, Borders, Paragraph, Tabs, Wrap},
-    Frame,
-};
+use tui::Frame;
+use tui::widgets::{Block, Borders, Paragraph, Tabs, Wrap};
+use tui::text::Spans;
+use tui::style::{Color, Modifier, Style};
+use tui::layout::{Constraint, Layout};
+use tui::backend::CrosstermBackend;
 
 use std::io::Stdout;
 
@@ -31,9 +29,9 @@ pub struct FeedsPopupMenu<'a> {
 }
 
 impl<'a> FeedsPopupMenu<'a> {
-    pub fn new(title: &'a str, db: &'a Database) -> Self {
+    pub fn new(db: &'a Database) -> Self {
         FeedsPopupMenu {
-            title,
+            title: "Search for a Feed Online",
             popped: false,
             fetched: false,
             feed: None,
@@ -156,14 +154,11 @@ impl<'a> Menu for FeedsPopupMenu<'a> {
             KeyCode::Enter => {
                 if self.fetched {
                     // SUBSCRIBING TO URL
-                    match self.choice {
-                        1 => {
-                            if let Some(feed) = self.feed() {
-								insert_one_feed(feed, self.db).unwrap();
-                            }
+					if let 1 = self.choice {
+                        if let Some(feed) = self.feed() {
+							insert_one_feed(feed, self.db).unwrap();
                         }
-                        _ => {}
-                    }
+					}
 
                     self.refresh();
                 } else {
@@ -183,11 +178,11 @@ impl<'a> Menu for FeedsPopupMenu<'a> {
 
             _ => {}
         }
-
-        MenuState::Feeds
+        // Fallback if none of the keys were pressed
+        self.state()
     }
 
-    fn refresh(&mut self) -> crate::Result<()> {
+    fn refresh(&mut self) -> crate::error::Result<()> {
         self.popped = false;
         self.fetched = false;
         self.feed = None;

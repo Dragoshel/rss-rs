@@ -1,4 +1,3 @@
-use mongodb::bson::doc;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
@@ -8,6 +7,7 @@ use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
+use mongodb::bson::doc;
 use mongodb::sync::Database;
 
 use std::io::Stdout;
@@ -27,25 +27,23 @@ pub struct FeedsMenu<'a> {
 }
 
 impl<'a> FeedsMenu<'a> {
-    pub fn new(title: &'a str, db: &'a Database) -> crate::Result<Self> {
-        let feeds = find_many_feed(None, db)?;
-        let menu = Self {
-            title,
-            feeds,
+    pub fn new(db: &'a Database) -> Self {
+        Self {
+            title: "Your Feeds",
+            feeds: vec![],
             state: ListState::default(),
 
-            popup_menu: FeedsPopupMenu::new("Search for a Feed Online", db),
+            popup_menu: FeedsPopupMenu::new(db),
 
             db,
-        };
-        Ok(menu)
+        }
     }
 
-    fn feeds(&self) -> &[Feed] {
+    pub fn feeds(&self) -> &[Feed] {
         &self.feeds
     }
 
-    fn set_feeds(&mut self, feeds: impl Into<Vec<Feed>>) {
+    pub fn set_feeds(&mut self, feeds: impl Into<Vec<Feed>>) {
         self.feeds = feeds.into();
     }
 
@@ -90,6 +88,9 @@ impl<'a> FeedsMenu<'a> {
 
 impl<'a> Menu for FeedsMenu<'a> {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
+        let background = Block::default().style(Style::default().bg(one_dark(Color::Black)));
+        f.render_widget(background, f.size());
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(5)
@@ -197,23 +198,18 @@ impl<'a> Menu for FeedsMenu<'a> {
                 }
 
                 KeyCode::Char('d') => {
-                    if let Some(selected_state) = self.state.selected() {
-                        let selected_feed = self.feeds.get(selected_state);
-
-                        if let Some(selected) = selected_feed {
-                            delete_one_feed(doc! {"title": selected.title()}, self.db).unwrap();
+                    if let Some(selected) = self.state.selected() {
+                        if let Some(feed) = self.feeds.get(selected) {
+                            delete_one_feed(doc! {"title": feed.title()}, self.db).unwrap();
                         }
                     }
                     self.refresh().unwrap();
                 }
 
                 KeyCode::Enter => {
-                    if let Some(selected_state) = self.state.selected() {
-                        let selected_feed = self.feeds.get(selected_state);
-
-                        if let Some(selected) = selected_feed {
-							let stories = selected.stories().to_vec();
-                            return MenuState::Stories(Some(stories));
+                    if let Some(selected) = self.state.selected() {
+                        if let Some(feed) = self.feeds.get(selected) {
+                            return MenuState::Stories(Some(feed.clone()));
                         }
                     }
                 }
@@ -221,11 +217,11 @@ impl<'a> Menu for FeedsMenu<'a> {
                 _ => {}
             }
         }
-
-        MenuState::Feeds
+        // Fallback if none of the keys were pressed
+        self.state()
     }
 
-    fn refresh(&mut self) -> crate::Result<()> {
+    fn refresh(&mut self) -> crate::error::Result<()> {
         self.feeds = find_many_feed(None, self.db)?;
         Ok(())
     }

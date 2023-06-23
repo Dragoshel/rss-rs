@@ -9,43 +9,44 @@ use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
+use mongodb::bson::doc;
 use mongodb::sync::Database;
 
-use crate::models::Story;
+use crate::models::{find_one_feed, update_one_feed, Feed};
 
-use super::{Menu, MenuState, one_dark};
+use super::{one_dark, Menu, MenuState};
 
 pub struct StoriesMenu<'a> {
     title: &'a str,
-    stories: Vec<Story>,
+    feed: Feed,
     state: ListState,
 
     db: &'a Database,
 }
 
 impl<'a> StoriesMenu<'a> {
-    pub fn new(title: &'a str, db: &'a Database) -> Self {
+    pub fn new(db: &'a Database) -> Self {
         StoriesMenu {
-            title,
-            stories: Vec::new(),
+            title: "Your Stories",
+            feed: Feed::default(),
             state: ListState::default(),
 
             db,
         }
     }
 
-    pub fn stories(&self) -> &[Story] {
-        &self.stories
+    pub fn feed(&self) -> &Feed {
+        &self.feed
     }
 
-    pub fn set_stories(&mut self, stories: impl Into<Vec<Story>>) {
-		self.stories = stories.into();
+    pub fn set_feed(&mut self, feed: impl Into<Feed>) {
+        self.feed = feed.into()
     }
 
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.stories.len() - 1 {
+                if i >= self.feed.stories().len() - 1 {
                     0
                 } else {
                     i + 1
@@ -60,7 +61,7 @@ impl<'a> StoriesMenu<'a> {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.stories.len() - 1
+                    self.feed.stories().len() - 1
                 } else {
                     i - 1
                 }
@@ -73,6 +74,9 @@ impl<'a> StoriesMenu<'a> {
 
 impl<'a> Menu for StoriesMenu<'a> {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
+        let background = Block::default().style(Style::default().bg(one_dark(Color::Black)));
+        f.render_widget(background, f.size());
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(5)
@@ -132,13 +136,21 @@ impl<'a> Menu for StoriesMenu<'a> {
             .split(chunks[1]);
 
         let items: Vec<ListItem> = self
-            .stories
+            .feed
+            .stories()
             .iter()
-            .map(|s| ListItem::new(s.title().unwrap_or_default()))
+            .map(|s| {
+                let title = s.title().unwrap_or_default();
+                let color = if s.read {
+                    Color::DarkGray
+                } else {
+                    Color::White
+                };
+                ListItem::new(title).style(Style::default().fg(color))
+            })
             .collect();
 
         let list = List::new(items)
-            .style(Style::default().fg(Color::White))
             .highlight_style(Style::default().fg(one_dark(Color::LightBlue)))
             .highlight_symbol("> ");
         // STORIES LIST
@@ -165,23 +177,35 @@ impl<'a> Menu for StoriesMenu<'a> {
             }
 
             KeyCode::Enter => {
-                if let Some(selected_state) = self.state.selected() {
-                    let selected_story = self.stories.get(selected_state);
+                if let Some(selected) = self.state.selected() {
+                    if let Some(story) = self.feed.stories().get(selected) {
+                        // Function for setting a story as read
+                        update_one_feed(
+                            doc! {
+                                "stories._id": story.id
+                            },
+                            doc! {
+                                "$set": {
+                                    "stories.$.read": true
+                                }
+                            },
+                            self.db,
+                        )
+                        .unwrap();
 
-                    if let Some(selected) = selected_story {
-						let story = selected.clone();
-                        return MenuState::Contents(Some(story));
+                        return MenuState::Contents(Some(story.clone()));
                     }
                 }
             }
             _ => {}
         }
-
-        MenuState::Stories(None)
+        // Fallback if none of the keys were pressed
+        self.state()
     }
 
-    fn refresh(&mut self) -> crate::Result<()> {
-        todo!()
+    fn refresh(&mut self) -> crate::error::Result<()> {
+        self.feed = find_one_feed(Some(doc! {"_id": self.feed.id}), self.db)?.unwrap();
+        Ok(())
     }
 
     fn state(&mut self) -> MenuState {

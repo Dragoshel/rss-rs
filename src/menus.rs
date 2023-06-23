@@ -16,11 +16,11 @@ use tui::Frame;
 
 use crossterm::event::KeyEvent;
 
-use crate::models::Story;
+use crate::models::{Story, Feed};
 
 pub enum MenuState {
 	Feeds,
-	Stories(Option<Vec<Story>>),
+	Stories(Option<Feed>),
 	Contents(Option<Story>),
 	Exit,
 }
@@ -28,7 +28,7 @@ pub enum MenuState {
 pub trait Menu {
 	fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
 	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
-	fn refresh(&mut self) -> crate::Result<()>;
+	fn refresh(&mut self) -> crate::error::Result<()>;
 	fn state(&mut self) -> MenuState;
 }
 

@@ -1,14 +1,13 @@
-use std::io::Stdout;
-
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
-use tui::Frame;
-
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
+use tui::Frame;
 
 use crossterm::event::{KeyCode, KeyEvent};
+
+use std::io::Stdout;
 
 use crate::models::Story;
 
@@ -28,17 +27,20 @@ impl ContentsMenu {
         }
     }
 
-    pub fn get_story(&self) -> &Story {
+    pub fn story(&self) -> &Story {
         &self.story
     }
 
-    pub fn set_story(&mut self, story: Story) {
-        self.story = story;
+    pub fn set_story(&mut self, story: impl Into<Story>) {
+        self.story = story.into()
     }
 }
 
 impl Menu for ContentsMenu {
     fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
+        let background = Block::default().style(Style::default().bg(one_dark(Color::Black)));
+        f.render_widget(background, f.size());
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(5)
@@ -106,9 +108,12 @@ impl Menu for ContentsMenu {
 
         f.render_widget(paragraph, meta_chunks[0]);
 
+        let author = self.story.author().unwrap_or_default();
+        let creator = self.story.creator().unwrap_or_default();
+
         let author_spans = Spans::from(vec![
             Span::styled("Author: ", Style::default().fg(one_dark(Color::Green))),
-            Span::from(self.story.author().unwrap_or_default()),
+            Span::from(if author.is_empty() { creator } else { author }),
         ]);
 
         let paragraph = Paragraph::new(author_spans).wrap(Wrap { trim: true });
@@ -116,12 +121,14 @@ impl Menu for ContentsMenu {
         f.render_widget(paragraph, meta_chunks[2]);
         // META BOX
 
-        let paragraph = Paragraph::new(self.story.content().unwrap_or_default())
-            .wrap(Wrap { trim: true })
-            .scroll((self.scroll as u16, 0));
+        let description = self.story.description().unwrap_or_default();
+        let content = self.story.content().unwrap_or_default();
+
+        let paragraph = Paragraph::new(if content.is_empty() { description } else { content })
+	        .wrap(Wrap { trim: true })
+    	    .scroll((self.scroll as u16, 0));
 
         f.render_widget(paragraph, contents_chunks[1]);
-
         // CONTENTS
     }
 
@@ -146,12 +153,12 @@ impl Menu for ContentsMenu {
             }
             _ => {}
         }
-
-        MenuState::Contents(None)
+        // Fallback if none of the keys were pressed
+        self.state()
     }
 
-    fn refresh(&mut self) -> crate::Result<()> {
-        todo!()
+    fn refresh(&mut self) -> crate::error::Result<()> {
+		Ok(())
     }
 
     fn state(&mut self) -> MenuState {

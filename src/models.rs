@@ -6,10 +6,14 @@ pub use story::Story;
 
 use mongodb::bson::Document;
 use mongodb::sync::Database;
-use mongodb::results::{InsertOneResult, DeleteResult};
+use mongodb::results::{InsertOneResult, DeleteResult, UpdateResult, InsertManyResult};
 
 pub fn insert_one_feed(feed: &Feed, db: &Database) -> mongodb::error::Result<InsertOneResult> {
     db.collection::<Feed>("feeds").insert_one(feed, None)
+}
+
+pub fn insert_many_feed(feeds: Vec<&Feed>, db: &Database) -> mongodb::error::Result<InsertManyResult> {
+    db.collection::<Feed>("feeds").insert_many(feeds, None)
 }
 
 pub fn find_one_feed(filter: Option<Document>, db: &Database) -> mongodb::error::Result<Option<Feed>> {
@@ -18,7 +22,7 @@ pub fn find_one_feed(filter: Option<Document>, db: &Database) -> mongodb::error:
 }
 
 pub fn find_many_feed(filter: Option<Document>, db: &Database) -> mongodb::error::Result<Vec<Feed>> {
-    let mut cursor = db.collection("feeds").find(None, None)?;
+    let mut cursor = db.collection("feeds").find(filter, None)?;
     let mut feeds: Vec<Feed> = Vec::new();
 
     while cursor.advance()? {
@@ -28,6 +32,10 @@ pub fn find_many_feed(filter: Option<Document>, db: &Database) -> mongodb::error
     Ok(feeds)	
 }
 
-pub fn delete_one_feed(filter: Document, db: &Database) -> mongodb::error::Result<DeleteResult> {
-    db.collection::<Feed>("feeds").delete_one(filter, None)
+pub fn delete_one_feed(query: Document, db: &Database) -> mongodb::error::Result<DeleteResult> {
+    db.collection::<Feed>("feeds").delete_one(query, None)
+}
+
+pub fn update_one_feed(query: Document, update: Document, db: &Database) -> mongodb::error::Result<UpdateResult> {
+	db.collection::<Feed>("feeds").update_one(query, update, None)
 }
