@@ -69,7 +69,7 @@ impl Cli {
             verbose,
         }) = self.command
         {
-            let fetched_feed = fetch_feed(url)?;
+            let fetched_feed = fetch_feed(url.as_str())?;
             if feed {
                 println!("{fetched_feed:?}");
             } else if story_all {

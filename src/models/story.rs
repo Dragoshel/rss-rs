@@ -1,9 +1,10 @@
 use std::io::{BufReader, Cursor};
 
-use html2text::render::text_renderer::PlainDecorator;
 use serde::{Deserialize, Serialize};
 
 use mongodb::bson::oid::ObjectId;
+
+use html2text::render::text_renderer::PlainDecorator;
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct Story {

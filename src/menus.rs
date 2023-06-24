@@ -1,12 +1,14 @@
 mod contents_menu;
 mod feeds_menu;
 mod stories_menu;
-mod feeds_popup_menu;
+mod subscribe_popup;
+mod delete_feed_popup;
 
 pub use contents_menu::ContentsMenu;
 pub use feeds_menu::FeedsMenu;
 pub use stories_menu::StoriesMenu;
-pub use feeds_popup_menu::FeedsPopupMenu;
+pub use subscribe_popup::SubscribePopup;
+pub use delete_feed_popup::DeleteFeedPopup;
 
 use std::io::Stdout;
 
@@ -28,7 +30,8 @@ pub enum MenuState {
 pub trait Menu {
 	fn draw(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>);
 	fn transition(&mut self, key_event: KeyEvent) -> MenuState;
-	fn refresh(&mut self) -> crate::error::Result<()>;
+	fn observer(&mut self);
+	fn reload(&mut self) -> crate::error::Result<()>;
 	fn state(&mut self) -> MenuState;
 }
 
@@ -42,6 +45,8 @@ pub fn one_dark(color: Color) -> Color {
 		Color::Magenta => Color::Rgb(198, 120, 221),
 		Color::LightBlue => Color::Rgb(86, 182, 194),
 		Color::White => Color::Rgb(171, 178, 191),
+		Color::Gray => Color::Rgb(125, 131, 142),
+		Color::DarkGray => Color::Rgb(32, 32, 40),
 		_ => color
 	}
 }

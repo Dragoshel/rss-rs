@@ -1,6 +1,6 @@
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Style};
+use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui::Frame;
@@ -8,6 +8,7 @@ use tui::Frame;
 use crossterm::event::{KeyCode, KeyEvent};
 
 use std::io::Stdout;
+use std::process::Command;
 
 use crate::models::Story;
 
@@ -86,22 +87,25 @@ impl Menu for ContentsMenu {
 
         let contents_chunks = Layout::default()
             .constraints(vec![Constraint::Percentage(10), Constraint::Percentage(90)])
-            .margin(2)
+            .margin(1)
             .split(chunks[1]);
 
         // META BOX
         let meta_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
-                Constraint::Percentage(25),
-                Constraint::Percentage(50),
-                Constraint::Percentage(25),
+                Constraint::Percentage(30),
+                Constraint::Percentage(40),
+                Constraint::Percentage(30),
             ])
             .split(contents_chunks[0]);
 
         let published_spans = Spans::from(vec![
             Span::styled("Published: ", Style::default().fg(one_dark(Color::Green))),
-            Span::from(self.story.pub_date().unwrap_or_default()),
+            Span::styled(
+                self.story.pub_date().unwrap_or_default(),
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
         ]);
 
         let paragraph = Paragraph::new(published_spans).wrap(Wrap { trim: true });
@@ -113,7 +117,10 @@ impl Menu for ContentsMenu {
 
         let author_spans = Spans::from(vec![
             Span::styled("Author: ", Style::default().fg(one_dark(Color::Green))),
-            Span::from(if author.is_empty() { creator } else { author }),
+            Span::styled(
+                if author.is_empty() { creator } else { author },
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
         ]);
 
         let paragraph = Paragraph::new(author_spans).wrap(Wrap { trim: true });
@@ -124,9 +131,13 @@ impl Menu for ContentsMenu {
         let description = self.story.description().unwrap_or_default();
         let content = self.story.content().unwrap_or_default();
 
-        let paragraph = Paragraph::new(if content.is_empty() { description } else { content })
-	        .wrap(Wrap { trim: true })
-    	    .scroll((self.scroll as u16, 0));
+        let paragraph = Paragraph::new(if content.is_empty() {
+            description
+        } else {
+            content
+        })
+        .wrap(Wrap { trim: true })
+        .scroll((self.scroll as u16, 0));
 
         f.render_widget(paragraph, contents_chunks[1]);
         // CONTENTS
@@ -151,17 +162,27 @@ impl Menu for ContentsMenu {
             KeyCode::Left => {
                 return MenuState::Stories(None);
             }
+
+            KeyCode::Enter => {
+                Command::new("xdg-open")
+                    .arg(self.story.link().unwrap_or_default())
+                    .output()
+                    .unwrap();
+            }
+
             _ => {}
         }
         // Fallback if none of the keys were pressed
         self.state()
     }
 
-    fn refresh(&mut self) -> crate::error::Result<()> {
-		Ok(())
+    fn reload(&mut self) -> crate::error::Result<()> {
+        Ok(())
     }
 
     fn state(&mut self) -> MenuState {
         MenuState::Contents(None)
     }
+
+    fn observer(&mut self) {}
 }

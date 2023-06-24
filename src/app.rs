@@ -34,14 +34,17 @@ impl<'a> App<'a> {
     }
 
     pub fn load(&mut self) -> crate::error::Result<()> {
-        self.feeds_menu.refresh()
+        self.feeds_menu.reload()
     }
 
-    fn draw_menu<M: Menu>(
+    fn ui<M: Menu>(
         menu: &mut M,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> MenuState {
-		// RENDERING MENU	
+		// EXTRA RUNNING IN THE BACKGROUND ex. POPUP
+		menu.observer();
+
+		// RENDERING MENU
         terminal.draw(|f| menu.draw(f)).unwrap();
 
 		// READING KEYBOARD at 100 millis
@@ -64,24 +67,24 @@ impl<'a> App<'a> {
         loop {
             self.current_menu = match &self.current_menu {
                 // TRANSITION FOR FEEDS MENU
-                MenuState::Feeds => Self::draw_menu(&mut self.feeds_menu, &mut terminal),
+                MenuState::Feeds => Self::ui(&mut self.feeds_menu, &mut terminal),
 
                 // TRANSITION FOR STORIES MENU
                 MenuState::Stories(feed) => {
                     if let Some(feed) = feed.to_owned() {
                         self.stories_menu.set_feed(feed);
-                        self.feeds_menu.refresh()?;
+                        self.feeds_menu.reload()?;
                     }
-                    Self::draw_menu(&mut self.stories_menu, &mut terminal)
+                    Self::ui(&mut self.stories_menu, &mut terminal)
                 }
 
                 // TRANSITION FOR CONTENTS MENU
                 MenuState::Contents(story) => {
                     if let Some(story) = story.to_owned() {
                         self.contents_menu.set_story(story);
-                        self.stories_menu.refresh()?;
+                        self.stories_menu.reload()?;
                     }
-                    Self::draw_menu(&mut self.contents_menu, &mut terminal)
+                    Self::ui(&mut self.contents_menu, &mut terminal)
                 }
 
                 MenuState::Exit => {

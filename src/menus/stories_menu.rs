@@ -1,16 +1,16 @@
-use std::io::Stdout;
-
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Style};
+use tui::style::{Color, Modifier, Style};
 use tui::terminal::Frame;
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
-
-use crossterm::event::{KeyCode, KeyEvent};
+use tui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap};
 
 use mongodb::bson::doc;
 use mongodb::sync::Database;
+
+use crossterm::event::{KeyCode, KeyEvent};
+
+use std::io::Stdout;
 
 use crate::models::{find_one_feed, update_one_feed, Feed};
 
@@ -19,7 +19,7 @@ use super::{one_dark, Menu, MenuState};
 pub struct StoriesMenu<'a> {
     title: &'a str,
     feed: Feed,
-    state: ListState,
+    state: TableState,
 
     db: &'a Database,
 }
@@ -29,7 +29,7 @@ impl<'a> StoriesMenu<'a> {
         StoriesMenu {
             title: "Your Stories",
             feed: Feed::default(),
-            state: ListState::default(),
+            state: TableState::default(),
 
             db,
         }
@@ -132,30 +132,54 @@ impl<'a> Menu for StoriesMenu<'a> {
 
         let stories_chunks = Layout::default()
             .constraints(vec![Constraint::Percentage(100)])
-            .margin(2)
+            .margin(1)
             .split(chunks[1]);
 
-        let items: Vec<ListItem> = self
+        let items: Vec<Row> = self
             .feed
             .stories()
             .iter()
             .map(|s| {
+                let read = if s.read { "[#]" } else { "" };
                 let title = s.title().unwrap_or_default();
+                let creator = s.creator().unwrap_or_default();
+                let author = s.creator().unwrap_or_default();
+                let author = if creator.is_empty() { author } else { creator };
+                let published = s.pub_date().unwrap_or_default();
                 let color = if s.read {
-                    Color::DarkGray
+                    one_dark(Color::Gray)
                 } else {
                     Color::White
                 };
-                ListItem::new(title).style(Style::default().fg(color))
+                Row::new(vec![
+                    Cell::from(read),
+                    Cell::from(title),
+                    Cell::from(author),
+                    Cell::from(published),
+                ])
+                .style(Style::default().fg(color))
             })
             .collect();
 
-        let list = List::new(items)
-            .highlight_style(Style::default().fg(one_dark(Color::LightBlue)))
-            .highlight_symbol("> ");
-        // STORIES LIST
+        let table = Table::new(items)
+            .header(
+                Row::new(vec!["Read", "Title", "Author", "Published"])
+                    .style(Style::default().add_modifier(Modifier::BOLD)),
+            )
+            .widths(&[
+                Constraint::Percentage(4),
+                Constraint::Percentage(50),
+                Constraint::Percentage(15),
+                Constraint::Percentage(10),
+            ])
+            .column_spacing(5)
+            .highlight_style(
+                Style::default()
+                    .bg(one_dark(Color::LightBlue))
+                    .fg(one_dark(Color::Black)),
+            );
 
-        f.render_stateful_widget(list, stories_chunks[0], &mut self.state);
+        f.render_stateful_widget(table, stories_chunks[0], &mut self.state);
     }
 
     fn transition(&mut self, key_event: KeyEvent) -> MenuState {
@@ -203,7 +227,7 @@ impl<'a> Menu for StoriesMenu<'a> {
         self.state()
     }
 
-    fn refresh(&mut self) -> crate::error::Result<()> {
+    fn reload(&mut self) -> crate::error::Result<()> {
         self.feed = find_one_feed(Some(doc! {"_id": self.feed.id}), self.db)?.unwrap();
         Ok(())
     }
@@ -211,4 +235,6 @@ impl<'a> Menu for StoriesMenu<'a> {
     fn state(&mut self) -> MenuState {
         MenuState::Stories(None)
     }
+
+    fn observer(&mut self) {}
 }

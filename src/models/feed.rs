@@ -4,13 +4,13 @@ use mongodb::bson::oid::ObjectId;
 
 use super::Story;
 
-#[derive(Deserialize, Serialize)]
-#[derive(Debug, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct Feed {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     title: String,
     link: String,
+    rss_link: String,
     description: String,
     stories: Vec<Story>,
 }
@@ -27,6 +27,7 @@ impl From<rss::Channel> for Feed {
             id: ObjectId::new(),
             title: channel.title,
             link: channel.link,
+            rss_link: String::new(),
             description: channel.description,
             stories,
         }
@@ -38,10 +39,7 @@ impl Feed {
         self.title.as_str()
     }
 
-    pub fn set_title<V>(&mut self, title: V)
-    where
-        V: Into<String>,
-    {
+    pub fn set_title(&mut self, title: impl Into<String>) {
         self.title = title.into();
     }
 
@@ -49,21 +47,23 @@ impl Feed {
         self.link.as_str()
     }
 
-    pub fn set_link<V>(&mut self, link: V)
-    where
-        V: Into<String>,
-    {
+    pub fn set_link(&mut self, link: impl Into<String>) {
         self.link = link.into();
+    }
+
+    pub fn rss_link(&self) -> &str {
+        self.rss_link.as_str()
+    }
+
+    pub fn set_rss_link(&mut self, rss_link: impl Into<String>) {
+        self.rss_link = rss_link.into();
     }
 
     pub fn description(&self) -> &str {
         self.description.as_str()
     }
 
-    pub fn set_description<V>(&mut self, description: V)
-    where
-        V: Into<String>,
-    {
+    pub fn set_description(&mut self, description: impl Into<String>) {
         self.description = description.into();
     }
 
@@ -71,10 +71,11 @@ impl Feed {
         &self.stories
     }
 
-    pub fn set_stories<V>(&mut self, stories: V)
-    where
-        V: Into<Vec<Story>>,
-    {
+    pub fn set_stories(&mut self, stories: impl Into<Vec<Story>>) {
         self.stories = stories.into();
     }
+
+	pub fn stories_len(&self) -> usize {
+		self.stories.len()
+	}
 }
