@@ -15,11 +15,13 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
+    /// Provide a valid URL to a running instance of MongoDB
     #[arg(short, long, value_name = "URL")]
     pub database: String,
 
+    /// Insert some default Feeds in the database
     #[arg(long)]
-    pub seed_database: bool,
+    pub seed: bool,
 }
 
 #[derive(Subcommand)]

@@ -13,7 +13,7 @@ use clap::Parser;
 fn main() {
     let cli = Cli::parse();
 
-    if cli.seed_database {
+    if cli.seed {
         cli.seed_database()
             .expect("Encountered error while seeding the database");
         println!("Succesfully Seeded");
