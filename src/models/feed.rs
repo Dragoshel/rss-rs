@@ -75,7 +75,7 @@ impl Feed {
         self.stories = stories.into();
     }
 
-	pub fn stories_len(&self) -> usize {
-		self.stories.len()
-	}
+    pub fn stories_len(&self) -> usize {
+        self.stories.len()
+    }
 }

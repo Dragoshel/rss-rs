@@ -1,9 +1,9 @@
 mod app;
+mod cli;
 mod error;
 mod menus;
-mod util;
-mod cli;
 mod models;
+mod util;
 
 pub use app::App;
 pub use cli::{Cli, Commands};
@@ -11,12 +11,13 @@ pub use cli::{Cli, Commands};
 use clap::Parser;
 
 fn main() {
-	let cli = Cli::parse();
+    let cli = Cli::parse();
 
-	if cli.seed_database {
-		cli.seed_database().expect("Encountered error while seeding the database");
-		println!("Succesfully Seeded");
-	} else {
-	    cli.handle_args().unwrap();
-	}
+    if cli.seed_database {
+        cli.seed_database()
+            .expect("Encountered error while seeding the database");
+        println!("Succesfully Seeded");
+    } else {
+        cli.handle_args().unwrap();
+    }
 }

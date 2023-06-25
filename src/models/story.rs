@@ -30,9 +30,9 @@ impl From<rss::Item> for Story {
             None
         };
 
-		let html = BufReader::new(Cursor::new(item.content().unwrap_or_default()));
-		let html = html2text::parse(html);
-		let html = html.render(200, PlainDecorator::new()).into_string();
+        let html = BufReader::new(Cursor::new(item.content().unwrap_or_default()));
+        let html = html2text::parse(html);
+        let html = html.render(200, PlainDecorator::new()).into_string();
 
         let story = Self {
             id: ObjectId::new(),

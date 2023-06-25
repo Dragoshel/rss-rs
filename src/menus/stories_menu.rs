@@ -95,22 +95,22 @@ impl<'a> Menu for StoriesMenu<'a> {
 
         let back_spans = Spans::from(vec![
             Span::styled("←     ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("go back"),
+            Span::raw("Go Back"),
         ]);
 
         let arrows_spans = Spans::from(vec![
             Span::styled("↑ ↓   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("navigate UP and DOWN"),
+            Span::raw("Navigate Up and Down"),
         ]);
 
         let enter_spans = Spans::from(vec![
             Span::styled("ENTER ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("load story"),
+            Span::raw("Load Story"),
         ]);
 
         let quit_spans = Spans::from(vec![
             Span::styled("ESC   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("quit"),
+            Span::raw("Quit"),
         ]);
 
         let paragraph = Paragraph::new(vec![

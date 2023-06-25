@@ -37,17 +37,14 @@ impl<'a> App<'a> {
         self.feeds_menu.reload()
     }
 
-    fn ui<M: Menu>(
-        menu: &mut M,
-        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    ) -> MenuState {
-		// EXTRA RUNNING IN THE BACKGROUND ex. POPUP
-		menu.observer();
+    fn ui<M: Menu>(menu: &mut M, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> MenuState {
+        // EXTRA RUNNING IN THE BACKGROUND ex. POPUP
+        menu.observer();
 
-		// RENDERING MENU
+        // RENDERING MENU
         terminal.draw(|f| menu.draw(f)).unwrap();
 
-		// READING KEYBOARD at 100 millis
+        // READING KEYBOARD at 100 millis
         if let Ok(_) = poll(Duration::from_millis(100)) {
             if let Ok(Event::Key(key_event)) = read() {
                 return menu.transition(key_event);

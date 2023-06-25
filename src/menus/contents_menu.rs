@@ -60,21 +60,32 @@ impl Menu for ContentsMenu {
 
         let back_spans = Spans::from(vec![
             Span::styled("←     ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("go back"),
+            Span::raw("Go Back"),
+        ]);
+
+        let enter_spans = Spans::from(vec![
+            Span::styled("ENTER ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("Open in Browser"),
         ]);
 
         let arrows_spans = Spans::from(vec![
             Span::styled("↑ ↓   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("navigate UP and DOWN"),
+            Span::raw("Navigate Up and Down"),
         ]);
 
         let quit_spans = Spans::from(vec![
             Span::styled("ESC   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("quit"),
+            Span::raw("Quit"),
         ]);
 
-        let paragraph = Paragraph::new(vec![back_spans, Spans::from(""), arrows_spans, quit_spans])
-            .wrap(Wrap { trim: true });
+        let paragraph = Paragraph::new(vec![
+            back_spans,
+            enter_spans,
+            Spans::from(""),
+            arrows_spans,
+            quit_spans,
+        ])
+        .wrap(Wrap { trim: true });
 
         f.render_widget(paragraph, help_chunks[0]);
         // COMMANDS BOX

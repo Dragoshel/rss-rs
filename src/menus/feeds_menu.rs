@@ -1,4 +1,3 @@
-use mongodb::bson::doc;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
@@ -7,6 +6,7 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 
 use mongodb::sync::Database;
+use mongodb::bson::doc;
 
 use std::io::Stdout;
 
@@ -104,9 +104,9 @@ impl<'a> Menu for FeedsMenu<'a> {
 
         f.render_widget(block, chunks[0]);
 
-        let subscribe_spans = Spans::from(vec![
-            Span::styled("s     ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("subscribe to a new feed"),
+        let subscribe_delete_spans = Spans::from(vec![
+            Span::styled("S D   ", Style::default().fg(one_dark(Color::Green))),
+            Span::raw("Subscribe/Delete Feed"),
         ]);
 
         let help_chunks = Layout::default()
@@ -114,29 +114,23 @@ impl<'a> Menu for FeedsMenu<'a> {
             .margin(2)
             .split(chunks[0]);
 
-        let delete_spans = Spans::from(vec![
-            Span::styled("d     ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("delete a feed"),
-        ]);
-
         let enter_spans = Spans::from(vec![
             Span::styled("ENTER ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("load news"),
+            Span::raw("Load Stories"),
         ]);
 
         let arrows_spans = Spans::from(vec![
             Span::styled("↑ ↓   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("navigate UP and DOWN"),
+            Span::raw("Navigate Up and Down"),
         ]);
 
         let quit_spans = Spans::from(vec![
             Span::styled("ESC   ", Style::default().fg(one_dark(Color::Green))),
-            Span::raw("quit"),
+            Span::raw("Quit"),
         ]);
 
         let paragraph = Paragraph::new(vec![
-            subscribe_spans,
-            delete_spans,
+            subscribe_delete_spans,
             enter_spans,
             Spans::from(""),
             arrows_spans,

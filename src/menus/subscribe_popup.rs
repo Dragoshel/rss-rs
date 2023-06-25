@@ -1,7 +1,7 @@
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Layout};
 use tui::style::{Color, Modifier, Style};
-use tui::text::{Spans, Span};
+use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph, Tabs, Wrap};
 use tui::Frame;
 
@@ -99,20 +99,21 @@ impl<'a> Menu for SubscribePopup<'a> {
                 let story_count = feed.stories().len().to_string();
                 let story_count = format!(" ({})", story_count);
                 let title_spans = Spans::from(vec![
-					Span::styled("[Title:] ", Style::default().fg(one_dark(Color::Gray))),
-					Span::raw(feed.title()),
+                    Span::styled("[Title:] ", Style::default().fg(one_dark(Color::Gray))),
+                    Span::raw(feed.title()),
                     Span::styled(story_count, Style::default().fg(one_dark(Color::Gray))),
                 ]);
-                let title = Paragraph::new(title_spans)
-					.wrap(Wrap { trim: true });
+                let title = Paragraph::new(title_spans).wrap(Wrap { trim: true });
                 f.render_widget(title, feed_chunks[0]);
 
                 let description_spans = Spans::from(vec![
-					Span::styled("[Description:] ", Style::default().fg(one_dark(Color::Gray))),
-					Span::raw(feed.description()),
+                    Span::styled(
+                        "[Description:] ",
+                        Style::default().fg(one_dark(Color::Gray)),
+                    ),
+                    Span::raw(feed.description()),
                 ]);
-                let description = Paragraph::new(description_spans)
-					.wrap(Wrap { trim: true });
+                let description = Paragraph::new(description_spans).wrap(Wrap { trim: true });
                 f.render_widget(description, feed_chunks[1]);
             }
 

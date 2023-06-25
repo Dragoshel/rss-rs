@@ -1,4 +1,4 @@
-use std::io::{Cursor, BufReader};
+use std::io::{BufReader, Cursor};
 
 use rss::Channel;
 
@@ -10,9 +10,9 @@ pub fn fetch_http(url: &str) -> reqwest::Result<BufReader<Cursor<String>>> {
 }
 
 pub fn fetch_feed(url: &str) -> crate::error::Result<Feed> {
-	let channel = fetch_http(url)?;
-	let channel = Channel::read_from(channel)?;
-	let mut feed = Feed::from(channel);
-	feed.set_rss_link(url);
-	Ok(feed)
+    let channel = fetch_http(url)?;
+    let channel = Channel::read_from(channel)?;
+    let mut feed = Feed::from(channel);
+    feed.set_rss_link(url);
+    Ok(feed)
 }
